@@ -217,7 +217,7 @@ Use when they ask “what is on sale?” Do not recite a global 15–35% story.
 ```json
 {
   "store_code": "en",
-  "topic": "delivery | returns | payments | wallet | showrooms | hours | installation | customization"
+  "topic": "delivery | returns | payments | wallet | showrooms | hours | installation | customization | customer_care | complaints"
 }
 ```
 
@@ -306,7 +306,8 @@ If there are no products, omit `products` or send `[]` and use text + one questi
 | Price, size, material of a named item | `get_product` |
 | “In stock?” | `check_stock` |
 | “What’s on sale?” | `get_current_promotions` |
-| Delivery, returns, payments, hours, branches | `get_policy` |
+| Delivery, returns, payments, hours, branches, customer care | `get_policy` (from `knowledge/` markdown, not Magento) |
+| Complaint / damaged or late order | `get_policy("complaints")` then `escalate_to_human` |
 | Logged-in Wallet question | `get_wallet_status` |
 | Add to cart | User confirm → `add_to_cart` |
 | Order never arrived / I need a human | `escalate_to_human` |

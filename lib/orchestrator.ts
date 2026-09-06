@@ -6,14 +6,19 @@ import type { AssistantTurn, ChatMessage, ProductCta, ProductDto, UiPayload } fr
 
 const SKU_RE = /\b(\d{4,8})\b/;
 const ARABIC_RE = /[\u0600-\u06FF]/;
-const CUSTOM_RE = /custom|تفصيل|قماش خاص|made to measure|fabric change|لون خاص/i;
+const CUSTOM_RE = /custom(?!er)|تفصيل|قماش خاص|made to measure|fabric change|لون خاص/i;
 const ORDER_RE = /order\s*(#|no\.?|number)?\s*\d+|رقم الطلب|وين الطلب|where is (my )?order|track/i;
 const DELIVERY_RE = /deliver|توصيل|شحن|installation|تركيب|free shipping/i;
 const WALLET_RE = /wallet|محفظة|midas cash/i;
-const HOURS_RE = /hours|open|ساعات|دوام|فرع|showroom|معرض/i;
+const SHOWROOM_RE = /showroom|branch(?:es)?|locator|معرض|فروع|\bفرع\b/i;
+const HOURS_RE = /\bhours\b|opening|open now|closing time|دوام|ساعات(?:\s+العمل)?/i;
+const CARE_RE =
+  /customer\s*(service|care|center|centre|support)|خدمة العملاء|مركز الخدمة|hotline|call\s*cent(?:er|re)|whats?app|واتساب/i;
+const COMPLAINT_RE =
+  /complain|complaint|شكوى|شكاي|damaged|broken|wrong item|missing (piece|part)|not (happy|satisfied)|unhappy|issue with|problem with|bought .{0,40}(problem|issue|wrong)/i;
 const PAY_RE = /knet|tabby|tamara|payment|دفع|كي نت/i;
 const RETURN_RE = /return|استرجاع|تبديل|refund/i;
-const OFFERS_RE = /\boffers?\b|\bon sale\b|promo|promotion|discount|deals?|عروض|عرض|خصم|تخفيض|weekly surprise/i;
+const OFFERS_RE = /\boffers?\b|\bon sale\b|promo|promotion|discount|deals?|عروض|(?<!م)عرض|خصم|تخفيض|weekly surprise/i;
 
 function catalogQuery(text: string) {
   return text
@@ -107,6 +112,37 @@ export async function runRulesOrchestrator(input: {
   const country = WEBSITE_NAME[session.website][lang];
   const used: string[] = [];
 
+  if (COMPLAINT_RE.test(last) || ORDER_RE.test(last)) {
+    used.push("escalate_to_human");
+    const topic = COMPLAINT_RE.test(last) ? "complaints" : "customer_care";
+    const care = getPolicy(session.store_code, topic);
+    used.push("get_policy");
+    const message = care.ok
+      ? care.text
+      : lang === "ar"
+        ? "لا أستطيع فتح الطلب من هنا. تواصل مع خدمة العملاء مع رقم الطلب."
+        : "I cannot open the order from this chat. Contact customer care with your order number.";
+    return { message, ui: emptyUi(true, topic), used_tools: used, engine: "rules" };
+  }
+
+  if (CARE_RE.test(last) || SHOWROOM_RE.test(last) || HOURS_RE.test(last)) {
+    used.push("get_policy");
+    const topics: Array<"showrooms" | "hours" | "customer_care"> = [];
+    if (SHOWROOM_RE.test(last)) topics.push("showrooms");
+    if (HOURS_RE.test(last)) topics.push("hours");
+    if (CARE_RE.test(last) || topics.length === 0) topics.push("customer_care");
+    const parts = topics
+      .map((topic) => getPolicy(session.store_code, topic))
+      .filter((p) => p.ok)
+      .map((p) => ("text" in p ? p.text : ""));
+    const message =
+      parts.filter(Boolean).join("\n\n") ||
+      (lang === "ar"
+        ? "تعذر تأكيد بيانات المعرض الآن. يمكن لخدمة العملاء المساعدة."
+        : "I cannot confirm that branch detail from here. Customer care can help.");
+    return { message, ui: emptyUi(true, topics[0]), used_tools: used, engine: "rules" };
+  }
+
   if (CUSTOM_RE.test(last)) {
     used.push("get_policy");
     const policy = getPolicy(session.store_code, "customization");
@@ -123,17 +159,6 @@ export async function runRulesOrchestrator(input: {
         ? `${policy.ok ? policy.text : ""} هذه بدائل جاهزة متوفرة في ${country}.`
         : `${policy.ok ? policy.text : ""} Here are ready-made in-stock alternatives in ${country}.`;
     return { message, ui: cards(products), used_tools: used, engine: "rules" };
-  }
-
-  if (ORDER_RE.test(last)) {
-    used.push("escalate_to_human");
-    const care = getPolicy(session.store_code, "showrooms");
-    used.push("get_policy");
-    const message =
-      lang === "ar"
-        ? `لا أستطيع عرض حالة الشحنة من هنا. مرّر رقم الطلب إلى خدمة العملاء. ${care.ok ? care.text : ""}`
-        : `I cannot see live tracking from this chat. I will flag this for customer care with your order number. ${care.ok ? care.text : ""}`;
-    return { message, ui: emptyUi(true, "order_status"), used_tools: used, engine: "rules" };
   }
 
   if (OFFERS_RE.test(last)) {
@@ -167,7 +192,6 @@ export async function runRulesOrchestrator(input: {
   const policyMap: Array<[RegExp, string]> = [
     [DELIVERY_RE, "delivery"],
     [WALLET_RE, "wallet"],
-    [HOURS_RE, "showrooms"],
     [PAY_RE, "payments"],
     [RETURN_RE, "returns"],
   ];

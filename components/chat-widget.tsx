@@ -14,8 +14,8 @@ type Bubble = ChatMessage & {
 };
 
 const SUGGESTIONS: Record<"en" | "ar", string[]> = {
-  en: ["What's on offer?", "Sofa for a small majlis", "Kare accent chair", "Is delivery free?"],
-  ar: ["شنو العروض الحالية؟", "عندي مساحة مجلس صغيرة، هل عندكم شي يناسب؟", "كرسي كاري", "هل التوصيل مجاني؟"],
+  en: ["What's on offer?", "Where is the Al Rai showroom?", "I have a complaint about my order", "Is delivery free?"],
+  ar: ["شنو العروض الحالية؟", "وين معرض الري؟", "عندي شكوى عن الطلب", "هل التوصيل مجاني؟"],
 };
 
 function formatPrice(product: ProductDto, ar: boolean) {

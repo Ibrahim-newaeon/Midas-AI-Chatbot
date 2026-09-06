@@ -195,7 +195,9 @@ Not Magento GraphQL in Phase 1. Serve a static JSON pack per website (Kuwait / Q
 { "store_code": "en", "topic": "delivery" }
 ```
 
-Topics: `delivery`, `returns`, `payments`, `wallet`, `showrooms`, `hours`, `installation`, `customization`.
+Topics: `delivery`, `returns`, `payments`, `wallet`, `showrooms`, `hours`, `installation`, `customization`, `customer_care`, `complaints`.
+
+Copy lives in `knowledge/<website>/en.md` and `ar.md` (markdown `## topic` sections). Marketing can edit those files without changing Magento. The bot must not invent another country’s phone number.
 
 ### Response
 

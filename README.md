@@ -33,6 +33,7 @@ Optional `env.example` values:
 
 - Store-aware session (`en`, `ar`, `qtr_en`, `ksa_ar`, …) with KWD / QAR / SAR / JOD / BHD
 - Tools: `search_catalog`, `get_product`, `check_stock`, `get_policy`, sale-category offers
+- **Knowledge pack** in `knowledge/<country>/en.md` and `ar.md` — showrooms, hours, customer care, complaints (editable markdown, not Magento)
 - Chat UI styled like the Magento storefront (logo, sale red `#b22020`, product cards with % badges)
 - “What’s on offer?” reads live Magento sale categories — not a keyword search for the word “offers”
 - Majlis queries search seating, not dining
@@ -43,6 +44,7 @@ Optional `env.example` values:
 | Path | Role |
 |---|---|
 | `prompts/midas-ai-website-system.md` | Website system prompt |
+| `knowledge/<country>/*.md` | Editable FAQ: showrooms, hours, customer care, complaints |
 | `lib/magento.ts` | GraphQL client + `Store` header |
 | `lib/tools.ts` | Middleware tools |
 | `app/api/chat/route.ts` | Orchestrator endpoint |

@@ -36,5 +36,5 @@ The middleware is a small API. The model calls `search_catalog`; middleware send
 
 ## Suggested owner split
 
-- **Marketing / brand:** keep the website prompt frozen; add real FAQ text per country into `get_policy` content (delivery, returns, showrooms, WhatsApp numbers).
+- **Marketing / brand:** keep the website prompt frozen; edit `knowledge/<country>/en.md` and `ar.md` for showrooms, hours, customer care, complaints, delivery, and returns.
 - **Engineering:** implement `docs/middleware-api.md` against live Magento GraphQL.
