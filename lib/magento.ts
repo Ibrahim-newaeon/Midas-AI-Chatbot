@@ -9,8 +9,6 @@ const PRODUCT_FIELDS = `
   name
   url_key
   stock_status
-  color
-  material
   manufacturer
   categories { name }
   image { url }
@@ -29,8 +27,6 @@ type MagentoProduct = {
   name: string;
   url_key: string;
   stock_status: StockStatus | string;
-  color?: number | string | null;
-  material?: number | string | null;
   manufacturer?: string | null;
   categories?: Array<{ name: string } | null> | null;
   image?: { url: string } | null;
@@ -42,11 +38,6 @@ type MagentoProduct = {
     };
   };
 };
-
-type AttrCache = Record<string, Record<string, string>>;
-let attrCache: AttrCache | null = null;
-let attrCacheAt = 0;
-const ATTR_TTL_MS = 1000 * 60 * 60;
 
 async function magentoGraphql<T>(store: StoreCode, query: string, variables?: Record<string, unknown>): Promise<T> {
   const res = await fetch(GRAPHQL_URL, {
@@ -71,38 +62,6 @@ async function magentoGraphql<T>(store: StoreCode, query: string, variables?: Re
   return json.data;
 }
 
-async function getAttributeLabels(store: StoreCode): Promise<AttrCache> {
-  const now = Date.now();
-  if (attrCache && now - attrCacheAt < ATTR_TTL_MS) return attrCache;
-  const data = await magentoGraphql<{
-    customAttributeMetadata: {
-      items: Array<{
-        attribute_code: string;
-        attribute_options: Array<{ value: string; label: string }>;
-      }>;
-    };
-  }>(
-    store,
-    `query {
-      customAttributeMetadata(attributes: [
-        { attribute_code: "color", entity_type: "catalog_product" }
-        { attribute_code: "material", entity_type: "catalog_product" }
-      ]) {
-        items { attribute_code attribute_options { value label } }
-      }
-    }`,
-  );
-  const next: AttrCache = {};
-  for (const item of data.customAttributeMetadata.items) {
-    next[item.attribute_code] = Object.fromEntries(
-      item.attribute_options.map((o) => [String(o.value), o.label]),
-    );
-  }
-  attrCache = next;
-  attrCacheAt = now;
-  return next;
-}
-
 function inferBrand(product: MagentoProduct): string | null {
   if (product.manufacturer) return String(product.manufacturer);
   const cats = (product.categories ?? []).map((c) => c?.name ?? "").join(" ");
@@ -112,9 +71,6 @@ function inferBrand(product: MagentoProduct): string | null {
 }
 
 export async function toProductDto(store: SessionContext, product: MagentoProduct): Promise<ProductDto> {
-  const labels = await getAttributeLabels(store.store_code);
-  const colorId = product.color == null ? null : String(product.color);
-  const materialId = product.material == null ? null : String(product.material);
   const min = product.price_range?.minimum_price;
   const regular = min?.regular_price?.value ?? 0;
   const final = min?.final_price?.value ?? regular;
@@ -133,8 +89,8 @@ export async function toProductDto(store: SessionContext, product: MagentoProduc
     discount_percent: percent && percent > 0 ? Math.round(percent) : null,
     stock_status: product.stock_status === "IN_STOCK" ? "IN_STOCK" : "OUT_OF_STOCK",
     categories: (product.categories ?? []).map((c) => c?.name).filter((n): n is string => Boolean(n)),
-    color: colorId ? labels.color?.[colorId] ?? null : null,
-    material: materialId ? labels.material?.[materialId] ?? null : null,
+    color: null,
+    material: null,
     dimensions: null,
   };
 }

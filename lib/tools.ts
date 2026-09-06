@@ -55,13 +55,15 @@ export async function searchCatalog(
   const pageSize = Math.min(Math.max(input.page_size ?? 6, 1), 12);
   const search = buildSearchText(input);
   try {
-    let raw = await searchMagento(store, search, Math.max(pageSize * 5, 20));
-    if (isMajlisQuery(input.query, input.room)) {
-      const extra = await searchMagento(store, "sofa sectional recliner living", 12);
-      const seen = new Set(raw.map((p) => p.sku));
-      for (const p of extra) {
-        if (!seen.has(p.sku)) raw.push(p);
-      }
+    const majlis = isMajlisQuery(input.query, input.room);
+    const [primary, extra] = await Promise.all([
+      searchMagento(store, search, 8),
+      majlis ? searchMagento(store, "sofa sectional recliner living", 8) : Promise.resolve([]),
+    ]);
+    const seen = new Set(primary.map((p) => p.sku));
+    const raw = [...primary];
+    for (const p of extra) {
+      if (!seen.has(p.sku)) raw.push(p);
     }
     let products = await Promise.all(raw.map((p) => toProductDto(store, p)));
     if (input.in_stock_only !== false) {
