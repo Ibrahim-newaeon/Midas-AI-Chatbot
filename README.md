@@ -48,7 +48,7 @@ Catalog API (already public): `POST https://midasfurniture.com/graphql` with hea
 ## How to run the model
 
 1. System: this prompt (cache it; it is static).
-2. Developer/session: JSON context with `store_code` from the Magento URL or store cookie.
+2. Session JSON from the Magento page — see [docs/session-injection.md](docs/session-injection.md) and [`widget/resolve-session.js`](widget/resolve-session.js).
 3. User: text and optional image.
 4. Tools: Magento GraphQL behind middleware (`search_catalog`, `visual_search`, `get_product`, `check_stock`, `get_policy`, …).
 5. Assistant: `message` + `ui.products` copied from tool JSON.
