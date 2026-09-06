@@ -31,45 +31,38 @@ function ProductCard({ product, ar }: { product: ProductDto & { title?: string }
   const price = formatPrice(product, ar);
   const title = product.title ?? product.name;
   return (
-    <article className="overflow-hidden border border-[#e9e9e9] bg-white">
+    <article className="midas-card">
       <a href={product.pdp_url} target="_blank" rel="noreferrer" className="block">
-        <div className="relative aspect-square bg-[#f7f7f7]">
+        <div className="relative aspect-square bg-surface-muted">
           {product.discount_percent ? (
-            <span className="absolute start-0 top-0 z-10 bg-[#b22020] px-2 py-1 text-[11px] font-semibold text-white">
-              {product.discount_percent}%
-            </span>
+            <span className="midas-sale-badge absolute start-0 top-0 z-10">{product.discount_percent}%</span>
           ) : null}
           {product.image_url ? (
             // Magento URLs include query params; native img is more reliable here.
             // eslint-disable-next-line @next/next/no-img-element
             <img src={product.image_url} alt={title} className="h-full w-full object-contain p-3" />
           ) : (
-            <div className="flex h-full items-center justify-center text-xs text-[#606060]">No image</div>
+            <div className="flex h-full items-center justify-center text-[12px] text-text-muted">No image</div>
           )}
         </div>
         <div className="space-y-2 p-3 text-center">
           {product.brand ? (
-            <p className="text-[10px] tracking-[0.16em] text-[#606060] uppercase">{product.brand}</p>
+            <p className="text-[12px] tracking-[0.03em] text-text-muted uppercase">{product.brand}</p>
           ) : null}
-          <p className="min-h-10 text-sm leading-snug font-medium text-[#121111]">{title}</p>
-          <div className="space-y-0.5">
+          <p className="min-h-10 text-[14px] leading-snug font-semibold text-ink">{title}</p>
+          <div className="space-y-0.5" dir="ltr">
             {price.onSale ? (
-              <p className="text-[11px] text-[#8a8a8a] line-through">
-                {ar ? "السعر السابق" : "Regular Price"} {price.was} {price.cur}
+              <p className="text-[12px] text-text-muted line-through">
+                {price.was} {price.cur}
               </p>
             ) : null}
-            <p className="text-sm font-semibold text-[#121111]">
-              {price.onSale ? (ar ? "سعر خاص" : "Special Price") : null} {price.n} {price.cur}
+            <p className="text-[16px] font-semibold text-ink">
+              {price.n} {price.cur}
             </p>
           </div>
         </div>
       </a>
-      <a
-        href={product.pdp_url}
-        target="_blank"
-        rel="noreferrer"
-        className="block bg-[#121111] py-2.5 text-center text-[11px] font-semibold tracking-[0.14em] text-white uppercase"
-      >
+      <a href={product.pdp_url} target="_blank" rel="noreferrer" className="midas-btn-pill-ink">
         {ar ? "عرض المنتج" : "View product"}
       </a>
     </article>
@@ -165,21 +158,21 @@ export function ChatWidget() {
   return (
     <div
       dir={dir}
-      className="flex min-h-[min(760px,calc(100dvh-8rem))] flex-col overflow-hidden border-x-0 border-y border-[#e9e9e9] bg-white sm:border"
+      className="flex min-h-[min(760px,calc(100dvh-8rem))] flex-col overflow-hidden border-x-0 border-y border-line bg-page sm:rounded-[10px] sm:border"
     >
-      <header className="flex flex-col gap-3 border-b border-[#e9e9e9] bg-white px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+      <header className="flex flex-col gap-3 border-b border-line bg-page px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <p className="text-lg font-semibold tracking-tight text-[#121111]">Midas AI</p>
-          <p className="text-xs text-[#606060]">
+          <p className="text-[21px] font-semibold text-ink">Midas AI</p>
+          <p className="text-[12px] text-text-muted">
             {ar
               ? "مساعد التسوق الرسمي — أسعار ومخزون هذا المتجر فقط"
               : "Official shopping assistant — this store’s live catalog"}
           </p>
         </div>
-        <label className="text-xs">
-          <span className="mb-1 block tracking-[0.12em] text-[#606060] uppercase">{ar ? "المتجر" : "Store"}</span>
+        <label className="text-[12px]">
+          <span className="mb-1 block tracking-[0.03em] text-text-muted uppercase">{ar ? "المتجر" : "Store"}</span>
           <select
-            className="h-9 min-w-48 border border-[#d9d9d9] bg-white px-2 text-sm text-[#121111]"
+            className="midas-input h-11 min-w-48 px-5"
             value={store}
             onChange={(e) => {
               setStore(e.target.value as StoreCode);
@@ -196,15 +189,16 @@ export function ChatWidget() {
         </label>
       </header>
 
-      <ScrollArea className="flex-1">
+      <ScrollArea className="flex-1 bg-page">
         <div className="space-y-4 p-4">
           {messages.length === 0 ? (
             <div className="space-y-6 py-4">
-              <div className="space-y-2 text-center">
-                <p className="font-heading text-2xl text-[#121111] sm:text-3xl">
+              <div className="space-y-3 text-center">
+                <p className="font-display text-[30px] leading-tight text-ink">
                   {ar ? "لا تتنازل، أنت تستحق الأفضل" : "Don't compromise, you deserve the finest"}
                 </p>
-                <p className="mx-auto max-w-xl text-sm text-[#606060]">
+                <span className="mx-auto block h-1 w-8 bg-accent-gold" aria-hidden />
+                <p className="mx-auto max-w-xl text-[14px] text-text-muted">
                   {ar
                     ? "اسأل عن العروض الحالية من فئات التخفيض في ماجنتو، أو غرفة، أو أرفق صورة."
                     : "Ask about current Magento sale categories, a room, or attach a photo. Prices follow the country you select."}
@@ -216,7 +210,7 @@ export function ChatWidget() {
                     key={s}
                     type="button"
                     disabled={pending}
-                    className="border border-[#121111] px-3 py-1.5 text-xs tracking-[0.08em] text-[#121111] uppercase hover:bg-[#121111] hover:text-white disabled:opacity-50"
+                    className={`midas-btn-pill ${ar ? "tracking-normal" : "uppercase tracking-[0.03em]"}`}
                     onClick={(e) => {
                       e.preventDefault();
                       e.stopPropagation();
@@ -229,7 +223,7 @@ export function ChatWidget() {
               </div>
               {featured.length ? (
                 <div className="space-y-3">
-                  <p className="text-center text-[11px] tracking-[0.2em] text-[#b22020] uppercase">
+                  <p className="text-center text-[12px] font-semibold tracking-[0.03em] text-accent-red uppercase">
                     {ar ? "عروض حية من الكتالوج" : "Live from this store’s sale categories"}
                   </p>
                   <div className="grid gap-3 sm:grid-cols-3">
@@ -246,8 +240,8 @@ export function ChatWidget() {
             <div key={`${m.role}-${i}`} className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}>
               <div className={`max-w-[min(100%,40rem)] space-y-3 ${m.role === "user" ? "text-end" : ""}`}>
                 <div
-                  className={`px-3 py-2 text-sm leading-relaxed ${
-                    m.role === "user" ? "bg-[#121111] text-white" : "bg-[#f5f5f5] text-[#121111]"
+                  className={`rounded-[10px] px-3 py-2 text-[14px] leading-relaxed ${
+                    m.role === "user" ? "bg-ink text-on-ink" : "bg-surface-off text-ink"
                   }`}
                 >
                   {m.imagePreview ? (
@@ -268,24 +262,24 @@ export function ChatWidget() {
           ))}
 
           {pending ? (
-            <div className="flex items-center gap-2 text-sm text-[#606060]">
+            <div className="midas-loader flex items-center gap-2 text-[14px]">
               <Loader2 className="size-4 animate-spin" />
               {ar ? "أبحث في كتالوج هذا المتجر…" : "Searching this store’s catalog…"}
             </div>
           ) : null}
-          {error ? <p className="text-sm text-[#b22020]">{error}</p> : null}
+          {error ? <p className="text-[14px] text-accent-red">{error}</p> : null}
         </div>
       </ScrollArea>
 
       <form
-        className="border-t border-[#e9e9e9] p-3"
+        className="border-t border-line bg-page p-3"
         onSubmit={(e) => {
           e.preventDefault();
           void send(input);
         }}
       >
         {image ? (
-          <div className="mb-2 flex items-center gap-2 text-xs text-[#606060]">
+          <div className="mb-2 flex items-center gap-2 text-[12px] text-text-muted">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={image} alt="" className="h-12 w-12 object-cover" />
             <button type="button" className="underline" onClick={() => setImage(null)}>
@@ -301,21 +295,14 @@ export function ChatWidget() {
             className="hidden"
             onChange={(e) => onPickFile(e.target.files?.[0])}
           />
-          <Button
-            type="button"
-            variant="outline"
-            size="icon"
-            className="rounded-none border-[#d9d9d9]"
-            onClick={() => fileRef.current?.click()}
-            aria-label="Upload"
-          >
+          <Button type="button" variant="outline" size="icon" onClick={() => fileRef.current?.click()} aria-label="Upload">
             <ImagePlus className="size-4" />
           </Button>
           <Textarea
             value={input}
             onChange={(e) => setInput(e.target.value)}
             placeholder={ar ? "اسأل عن غرفة، مقاس، أو أرفق صورة…" : "Ask about a room, size, or attach a photo…"}
-            className="min-h-11 max-h-32 flex-1 resize-none rounded-none"
+            className="midas-input min-h-11 max-h-32 flex-1 resize-none"
             rows={1}
             onKeyDown={(e) => {
               if (e.key === "Enter" && !e.shiftKey) {
@@ -324,7 +311,7 @@ export function ChatWidget() {
               }
             }}
           />
-          <Button type="submit" size="icon" disabled={pending} className="rounded-none bg-[#121111]" aria-label="Send">
+          <Button type="submit" size="icon" disabled={pending} aria-label="Send">
             <Send className="size-4" />
           </Button>
         </div>

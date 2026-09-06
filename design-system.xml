@@ -1,0 +1,143 @@
+<!-- design-system.xml -->
+<!--
+  MIDAS FURNITURE . DESIGN SYSTEM
+  Source: https://midasfurniture.com/en/ (live site, fetched 2026)
+  Platform: Magento 2 (theme: Brainvire/midasfurniture)
+
+  GROUNDING:
+    source="extracted" = value literally read from the site's CSS / inline styles / font links
+    source="inferred"  = derived to fill a role the site implies but does not name explicitly
+  Base font-size is 62.5% (Magento convention): 1rem = 10px. px equivalents noted inline.
+  This is a LIGHT, editorial e-commerce system (black-on-white). It is NOT dark-mode.
+-->
+<design_system id="midas-furniture" version="1.0.0" mode="light" source-url="https://midasfurniture.com/en/">
+<meta>
+<label>Midas Furniture</label>
+<description>Editorial light e-commerce system. Near-black ink on white, red interactive accent, gold decorative touch. Nord + Playfair Display, Noto Kufi Arabic for RTL.</description>
+<market>Kuwait / Gulf (KSA, Qatar, Bahrain, Jordan)</market>
+<platform>Magento 2 (Brainvire theme)</platform>
+<chromatic-policy note="Monochrome base (ink/white/greys). Red #b22020 is the single interactive accent. Gold #f5cd6f is a minor decorative icon accent only."/>
+</meta>
+<colors>
+<token name="ink" value="#121111" source="extracted" role="primary text, primary button fill, borders"/>
+<token name="page" value="#FFFFFF" source="extracted" role="page + surface background"/>
+<token name="surface-off" value="#F6F6F6" source="extracted" role="off-white section background"/>
+<token name="surface-muted" value="#F9F9F9" source="extracted" role="subtle fill"/>
+<token name="black" value="#000000" source="extracted" role="pure black (rounded-red button, some text)"/>
+<token name="text-primary" value="#121111" source="extracted"/>
+<token name="text-secondary" value="#363636" source="extracted"/>
+<token name="text-muted" value="#606060" source="extracted" role="body copy, secondary labels"/>
+<token name="text-soft" value="#747474" source="extracted"/>
+<token name="text-faint" value="#888888" source="extracted"/>
+<token name="line" value="#E9E9E9" source="extracted" role="default input/border hairline"/>
+<token name="line-strong" value="#D1D1D1" source="extracted"/>
+<token name="line-soft" value="#E6E6E6" source="extracted"/>
+<token name="accent-red" value="#B22020" source="extracted" role="INTERACTIVE accent: button hover fill, loaders, sale emphasis"/>
+<token name="accent-red-soft" value="#F23B3B" source="extracted" role="brighter red (secondary emphasis)"/>
+<token name="accent-red-bg" value="#FFBABA" source="extracted" role="light red tint (error/sale background)"/>
+<token name="accent-gold" value="#F5CD6F" source="extracted" role="DECORATIVE only: icon glyphs, rating stars. Not a UI action color."/>
+<token name="on-ink" value="#FFFFFF" source="extracted" role="text on ink / red / black fills"/>
+</colors>
+<typography>
+<fonts>
+<font name="font-sans" value="Nord, sans-serif" source="extracted" role="primary UI + body + buttons" note="self-hosted @font-face; weights 400/600 seen"/>
+<font name="font-display" value="Playfair Display, serif" source="extracted" role="display / editorial headings" note="loaded via Google Fonts, ital + wght 400..900"/>
+<font name="font-arabic" value="Noto Kufi Arabic, sans-serif" source="extracted" role="Arabic UI + body (RTL)" note="applied on /ar/ with direction:rtl"/>
+<font name="font-icon" value="midas-icon" source="extracted" role="icon glyph font" note="self-hosted; colored gold #F5CD6F in places"/>
+</fonts>
+<base source="extracted">
+<token name="root-font-size" value="62.5%" note="1rem = 10px (Magento). All rem below x10 = px."/>
+<token name="body-line-height" value="1.5"/>
+<token name="smoothing" value="antialiased"/>
+</base>
+<scale note="rem values extracted; px = rem x 10">
+<token name="h1" value="3rem" px="30px" source="extracted" weight="600" tracking="-1px"/>
+<token name="h2" value="3rem" px="30px" source="extracted" weight="600" tracking="-1px"/>
+<token name="h3" value="2.1rem" px="21px" source="extracted" weight="600"/>
+<token name="body" value="1.4rem" px="14px" source="inferred" note="typical Magento body; body copy color #606060"/>
+<token name="button" value="1.6rem" px="16px" source="extracted" weight="600"/>
+<token name="small" value="1.2rem" px="12px" source="inferred"/>
+</scale>
+<tracking source="extracted">
+<token name="tight" value="-1px" role="display headings (Latin only)"/>
+<token name="normal" value="0" role="body, and ALL Arabic text"/>
+<token name="wide" value="0.03em" role="occasional label emphasis"/>
+<rule>Never apply negative tracking to Arabic (Noto Kufi). Latin headings only.</rule>
+</tracking>
+</typography>
+<radius source="extracted">
+<token name="sm" value="4px" note="minor inputs"/>
+<token name="md" value="8px"/>
+<token name="lg" value="10px" note="cards"/>
+<token name="xl" value="12px" note="larger cards / media"/>
+<token name="pill" value="30px" role="rounded CTA buttons + loaders (most common rounded value)"/>
+<token name="circle" value="50%" role="avatars, icon circles"/>
+<token name="hairline-input" value="1px" note="text inputs use a near-square 1px radius"/>
+</radius>
+<components>
+<component name="button-primary" source="extracted">
+<prop name="background" value="#121111"/>
+<prop name="color" value="#FFFFFF"/>
+<prop name="border" value="1px solid #121111"/>
+<prop name="font-family" value="Nord, sans-serif"/>
+<prop name="font-weight" value="600"/>
+<prop name="font-size" value="1.6rem (16px)"/>
+<prop name="padding" value="7px 15px"/>
+<prop name="hover" value="red #B22020 fill grows from top via ::before (height 0 -> 100%)" note="signature interaction"/>
+</component>
+<component name="button-rounded" source="extracted" note=".button-rounded .pagebuilder-button-primary">
+<prop name="background" value="#FFFFFF"/>
+<prop name="color" value="#121111"/>
+<prop name="padding" value="10px 20px"/>
+<prop name="radius" value="30px (pill)"/>
+</component>
+<component name="button-rounded-red" source="extracted">
+<prop name="background" value="#000000"/>
+<prop name="color" value="#FFFFFF"/>
+<prop name="font-size" value="1.6rem"/>
+<prop name="padding" value="9px 20px"/>
+<prop name="radius" value="30px (pill)"/>
+</component>
+<component name="input-text" source="extracted">
+<prop name="background" value="#FFFFFF"/>
+<prop name="border" value="1px solid #E9E9E9"/>
+<prop name="border-radius" value="1px"/>
+<prop name="color" value="#000000"/>
+</component>
+<component name="price" source="extracted" note="e-commerce dual-price pattern">
+<prop name="special-price" value="ink #121111, weight 600"/>
+<prop name="regular-price" value="muted #606060, strikethrough"/>
+<prop name="discount-badge" value="e.g. '30%' — sale emphasis in red family"/>
+<prop name="currency" value="KWD (Kuwait); localized per store view"/>
+</component>
+</components>
+<motion source="extracted">
+<token name="scroll-behavior" value="smooth"/>
+<token name="theme-loading" value="6s themeLoading" note="red #B22020 loader animation"/>
+<token name="button-fill" value="height 0 -> 100% on hover" note="red wipe-up on primary buttons"/>
+<easing name="default" value="ease" source="inferred"/>
+</motion>
+<localization source="extracted">
+<language code="en" dir="ltr" font="Nord" url="/en/"/>
+<language code="ar" dir="rtl" font="Noto Kufi Arabic" url="/ar/" note="html direction:rtl applied"/>
+<stores note="multi-store, currency + language per view">
+<store code="kwt" country="Kuwait" currency="KWD" default="true"/>
+<store code="ksa" country="Saudi Arabia" currency="SAR"/>
+<store code="qtr" country="Qatar" currency="QAR"/>
+<store code="bhr" country="Bahrain" currency="BHD"/>
+<store code="jo" country="Jordan"/>
+</stores>
+<rtl-rules>
+<rule>Arabic uses Noto Kufi Arabic, letter-spacing 0, line-height 1.5.</rule>
+<rule>Mirror layout with logical properties; do not mirror the wordmark, product photos, or price numerals.</rule>
+</rtl-rules>
+</localization>
+<not_found_in_source>
+<item>No CSS custom properties (--vars) in the theme; colors are compiled hex (Less). Token names above are our abstraction, values are extracted.</item>
+<item>No dark mode exists on the site.</item>
+<item>No formal spacing scale is declared; padding values are ad hoc (7-20px seen). A spacing scale would be inferred, not extracted.</item>
+<item>Exact Nord weight set beyond 400/600 not confirmed.</item>
+<item>Playfair Display is loaded but its specific selector usage was not isolated in the fetched sheets (likely CMS/page-builder headings).</item>
+<item>Elevation/shadow values were not prominent; the system reads as flat with hairline borders rather than shadows.</item>
+</not_found_in_source>
+</design_system>
