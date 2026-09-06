@@ -1,58 +1,42 @@
 # Midas AI — Website Phase 1
 
-This repo holds the **website-only** system prompt for Midas AI, the virtual shopping assistant for [midasfurniture.com](https://midasfurniture.com/) and the GCC store views (Kuwait, Qatar, KSA, Jordan, Bahrain — English and Arabic).
+Website shopping assistant for [Midas Furniture](https://midasfurniture.com/). It talks to the live Magento GraphQL catalog (`Store` header per country/language). WhatsApp and Instagram are out of scope.
 
-It is **not** a WhatsApp or Instagram bot. Meta channels are Phase 2 and must not be loaded into this prompt.
+## Run locally
 
-## What this prompt is for
+```bash
+npm install
+npm run dev
+```
 
-Paste or load [`prompts/midas-ai-website-system.md`](prompts/midas-ai-website-system.md) as the model’s system instructions for the Magento website widget.
+Opens on [http://127.0.0.1:43217](http://127.0.0.1:43217).
 
-The orchestrator must also inject a **session object** every turn (`store_code`, currency, language, `base_path`, optional `page_sku`). The model is forbidden to quote prices until that is set.
+Optional `env.example` values:
 
-## Design choices (locked)
+- `MAGENTO_GRAPHQL_URL` — defaults to `https://midasfurniture.com/graphql`
+- `OPENAI_API_KEY` — only used to describe an uploaded photo before catalog search. Without it, photo search uses the caption you type.
 
-| Decision | Why |
+## What is implemented
+
+- Store-aware session (`en`, `ar`, `qtr_en`, `ksa_ar`, …) with KWD / QAR / SAR / JOD / BHD
+- Tools: `search_catalog`, `get_product`, `check_stock`, `get_policy`
+- Chat UI with product cards that open the real Midas PDP
+- Majlis queries search seating, not dining
+- No invented SKUs, no AR, no cross-country stock
+
+## Key files
+
+| Path | Role |
 |---|---|
-| One Magento, ten store views | Live GraphQL already scopes price, language, and stock via the `Store` header (`en`, `ar`, `qtr_en`, `ksa_ar`, …). |
-| Tools, not a frozen catalog | SKUs, KD-style fake IDs, sale %, and delivery rules go stale and cause hallucinations. |
-| Vision → Magento search | Phase 1 `visual_search` describes the photo, then searches this store. No Pinecone/AR required to launch. |
-| Arabic hospitality, gender-neutral | Majlis maps to seating, not dining. No `تودين` unless gender is known. |
-| No cross-country stock | Out of stock locally → alternatives on the **same** website. |
-| No customization | Ready-made factory pieces only. |
-| Cards from tool results only | The widget must not render a price the model invented. |
+| `prompts/midas-ai-website-system.md` | Website system prompt |
+| `lib/magento.ts` | GraphQL client + `Store` header |
+| `lib/tools.ts` | Middleware tools |
+| `app/api/chat/route.ts` | Orchestrator endpoint |
+| `components/chat-widget.tsx` | Website widget |
+| `docs/middleware-api.md` | Tool contracts |
+| `docs/session-injection.md` | Magento URL / cookie session |
+| `widget/resolve-session.js` | Storefront helper to drop into Magento later |
 
-## Store map
+## Magento embed (next)
 
-| Store code | Site | Currency | Path |
-|---|---|---|---|
-| `en` / `ar` | Kuwait | KWD | `/en/`, `/ar/` |
-| `qtr_en` / `qtr_ar` | Qatar | QAR | `/qtr_en/`, `/qtr_ar/` |
-| `ksa_en` / `ksa_ar` | KSA | SAR | `/ksa_en/`, `/ksa_ar/` |
-| `jo_en` / `jo_ar` | Jordan | JOD | `/jo_en/`, `/jo_ar/` |
-| `bhr_en` / `bhr_ar` | Bahrain | BHD | `/bhr_en/`, `/bhr_ar/` |
-
-Catalog API (already public): `POST https://midasfurniture.com/graphql` with header `Store: <store_code>`.
-
-## What was removed from the original Mega prompt
-
-- WhatsApp and Instagram formatters, Meta fees, BSP/webhook architecture
-- SaaS pricing tables and token commercial packaging
-- Hardcoded 15–35% promotions and “KWD 15 delivery saving”
-- 3D/AR CTAs as a default
-- Custom-fabric human escalation
-- Cross-border warehouse shipping
-- Invented SKUs (`KD-884`, `AS-221`)
-- Vector DB and Wallet live math as launch blockers
-
-## How to run the model
-
-1. System: this prompt (cache it; it is static).
-2. Session JSON from the Magento page — see [docs/session-injection.md](docs/session-injection.md) and [`widget/resolve-session.js`](widget/resolve-session.js).
-3. User: text and optional image.
-4. Tools: Magento GraphQL behind middleware (`search_catalog`, `visual_search`, `get_product`, `check_stock`, `get_policy`, …).
-5. Assistant: `message` + `ui.products` copied from tool JSON.
-
-## What is next
-
-See [`docs/next-steps.md`](docs/next-steps.md). Immediate build: Magento GraphQL middleware — [`docs/middleware-api.md`](docs/middleware-api.md). Launch bar: [`docs/stress-tests.md`](docs/stress-tests.md).
+On the Magento theme, read `BASE_URL`, POST `/api/chat` with `session` from `widget/resolve-session.js`. See `docs/session-injection.md`.
