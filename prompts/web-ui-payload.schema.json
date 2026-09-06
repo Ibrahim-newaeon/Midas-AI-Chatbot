@@ -1,0 +1,67 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Midas AI website assistant turn",
+  "type": "object",
+  "required": ["message", "ui"],
+  "properties": {
+    "message": {
+      "type": "string",
+      "description": "Customer-facing copy. English or Arabic. No HTML. No invented prices."
+    },
+    "ui": {
+      "type": "object",
+      "properties": {
+        "products": {
+          "type": "array",
+          "maxItems": 3,
+          "items": {
+            "type": "object",
+            "required": ["sku", "title", "final_price", "currency", "stock_status"],
+            "properties": {
+              "sku": { "type": "string" },
+              "title": { "type": "string" },
+              "brand": { "type": "string" },
+              "image_url": { "type": "string" },
+              "url_key": { "type": "string" },
+              "regular_price": { "type": "number" },
+              "final_price": { "type": "number" },
+              "currency": {
+                "type": "string",
+                "enum": ["KWD", "QAR", "SAR", "JOD", "BHD"]
+              },
+              "stock_status": {
+                "type": "string",
+                "enum": ["IN_STOCK", "OUT_OF_STOCK"]
+              },
+              "match_type": {
+                "type": "string",
+                "enum": ["exact", "close", "style"]
+              },
+              "ctas": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "enum": ["view", "add_to_cart", "handoff"]
+                }
+              }
+            }
+          }
+        },
+        "ctas": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": ["view", "add_to_cart", "handoff"]
+          }
+        },
+        "handoff": {
+          "type": "object",
+          "properties": {
+            "show": { "type": "boolean" },
+            "reason": { "type": ["string", "null"] }
+          }
+        }
+      }
+    }
+  }
+}
