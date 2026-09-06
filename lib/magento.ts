@@ -1,3 +1,4 @@
+import { expandSearchQueries, isSeatingIntent } from "@/lib/arabicNormalize";
 import { pdpUrl, type SessionContext, type StoreCode, STORE_MAP } from "@/lib/stores";
 import type { ProductDto, StockStatus } from "@/lib/types";
 
@@ -93,6 +94,7 @@ export async function toProductDto(store: SessionContext, product: MagentoProduc
     color: null,
     material: null,
     dimensions: null,
+    fetched_at: new Date().toISOString(),
   };
 }
 
@@ -103,14 +105,16 @@ export function sessionFor(store_code: StoreCode): SessionContext {
     page_sku: null,
     customer_logged_in: false,
     channel: "web",
+    chat_session_id: null,
   };
 }
 
-const MAJLIS_RE = /majlis|diwaniya|ديوان|مجلس/i;
+const MAJLIS_RE = /majlis|majles|diwaniya|dawaniya|ديوان|مجلس/i;
 const DINING_RE = /dining|طعام|سفرة|طاولة طعام/i;
 
 export function isMajlisQuery(...parts: Array<string | null | undefined>) {
-  return MAJLIS_RE.test(parts.filter(Boolean).join(" "));
+  const text = parts.filter(Boolean).join(" ");
+  return isSeatingIntent(text) || MAJLIS_RE.test(text);
 }
 
 export function buildSearchText(input: {
@@ -125,15 +129,18 @@ export function buildSearchText(input: {
   const tokens = [input.query, input.brand, input.color, input.material, input.category, input.room]
     .filter((t): t is string => Boolean(t && t.trim()))
     .join(" ");
+  const expanded = expandSearchQueries(tokens || "furniture");
   if (majlis) {
-    const cleaned = tokens
-      .replace(DINING_RE, " ")
-      .replace(MAJLIS_RE, " ")
-      .replace(/\s+/g, " ")
-      .trim();
-    return [cleaned, "sofa chair living coffee table centre"].filter(Boolean).join(" ");
+    return expanded.map((q) => {
+      const cleaned = q
+        .replace(DINING_RE, " ")
+        .replace(MAJLIS_RE, " ")
+        .replace(/\s+/g, " ")
+        .trim();
+      return [cleaned, "sofa chair living coffee table centre"].filter(Boolean).join(" ");
+    });
   }
-  return tokens || "furniture";
+  return expanded;
 }
 
 export async function searchMagento(

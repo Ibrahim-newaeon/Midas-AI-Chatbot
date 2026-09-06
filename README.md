@@ -32,7 +32,10 @@ Optional `env.example` values:
 ## What is implemented
 
 - Store-aware session (`en`, `ar`, `qtr_en`, `ksa_ar`, …) with KWD / QAR / SAR / JOD / BHD
-- Tools: `search_catalog`, `get_product`, `check_stock`, `get_policy`, sale-category offers
+- Runtime prompt is **Part A** of Combined System v1.1 (`prompts/midas-ai-website-system.md`). Full spec: `docs/combined-system-v1.1.md`
+- Tools: `search_catalog`, `get_product`, `check_stock`, `get_policy`, `get_current_promotions`
+- Arabic query normalization + Arabizi lexicon before Magento search (middleware fallback; Magento ES analyzer not changed)
+- Send-gate verifier: UI SKUs and spoken prices must match this turn’s Magento facts
 - **Knowledge pack** in `knowledge/<country>/en.md` and `ar.md` — showrooms, hours, customer care, complaints (editable markdown, not Magento)
 - Chat UI follows `design-system.xml` (Nord, Playfair Display, Noto Kufi Arabic, Magento buttons and prices)
 - “What’s on offer?” reads live Magento sale categories — not a keyword search for the word “offers”
@@ -43,7 +46,8 @@ Optional `env.example` values:
 
 | Path | Role |
 |---|---|
-| `prompts/midas-ai-website-system.md` | Website system prompt |
+| `prompts/midas-ai-website-system.md` | Part A runtime prompt (v1.1) |
+| `docs/combined-system-v1.1.md` | Full runtime + build spec |
 | `design-system.xml` | Extracted Magento theme tokens (Nord, Playfair, Noto Kufi, #121111 / #B22020 / #F5CD6F) |
 | `knowledge/<country>/*.md` | Editable FAQ: showrooms, hours, customer care, complaints |
 | `lib/magento.ts` | GraphQL client + `Store` header |

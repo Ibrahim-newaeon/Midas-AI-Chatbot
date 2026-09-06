@@ -55,17 +55,20 @@ export async function searchCatalog(
   if (!isStoreCode(input.store_code)) return badStore(input.store_code);
   const store = sessionFor(input.store_code);
   const pageSize = Math.min(Math.max(input.page_size ?? 6, 1), 12);
-  const search = buildSearchText(input);
+  const queries = [...new Set(buildSearchText(input))].slice(0, 3);
+  const search = queries.join(" ");
   try {
     const majlis = isMajlisQuery(input.query, input.room);
-    const [primary, extra] = await Promise.all([
-      searchMagento(store, search, 8),
-      majlis ? searchMagento(store, "sofa sectional recliner living", 8) : Promise.resolve([]),
-    ]);
-    const seen = new Set(primary.map((p) => p.sku));
-    const raw = [...primary];
-    for (const p of extra) {
-      if (!seen.has(p.sku)) raw.push(p);
+    const batches = await Promise.all(queries.map((query) => searchMagento(store, query, 8)));
+    const seen = new Set<string>();
+    const raw = [];
+    for (const batch of batches) {
+      for (const p of batch) {
+        if (!seen.has(p.sku)) {
+          seen.add(p.sku);
+          raw.push(p);
+        }
+      }
     }
     let products = await Promise.all(raw.map((p) => toProductDto(store, p)));
     if (input.in_stock_only !== false) {
@@ -163,6 +166,22 @@ export async function searchOnSale(store_code: StoreCode, page_size = 3, extraQu
     store_code,
     currency: store.currency,
     products: products.slice(0, page_size),
+  };
+}
+
+export async function getCurrentPromotions(store_code: StoreCode) {
+  if (!isStoreCode(store_code)) return badStore(store_code);
+  const store = sessionFor(store_code);
+  const [sale, categories] = await Promise.all([
+    searchOnSale(store_code, 3),
+    listSaleCategories(store_code).catch(() => [] as Array<{ id: number; name: string }>),
+  ]);
+  return {
+    ok: true as const,
+    store_code,
+    currency: store.currency,
+    campaigns: categories.map((c) => c.name),
+    products: sale.ok ? sale.products : [],
   };
 }
 

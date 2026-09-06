@@ -25,11 +25,12 @@ export type SessionContext = {
   page_sku: string | null;
   customer_logged_in: boolean;
   channel: "web";
+  chat_session_id: string | null;
 };
 
 export const STORE_MAP: Record<
   StoreCode,
-  Omit<SessionContext, "store_code" | "page_sku" | "customer_logged_in" | "channel">
+  Omit<SessionContext, "store_code" | "page_sku" | "customer_logged_in" | "channel" | "chat_session_id">
 > = {
   en: { website: "kuwait", locale: "en", language: "en", currency: "KWD", base_path: "/en/" },
   ar: { website: "kuwait", locale: "ar", language: "ar", currency: "KWD", base_path: "/ar/" },
@@ -78,7 +79,7 @@ export function isStoreCode(value: string | null | undefined): value is StoreCod
 
 export function sessionFromStoreCode(
   store_code: StoreCode,
-  extras?: Partial<Pick<SessionContext, "page_sku" | "customer_logged_in">>,
+  extras?: Partial<Pick<SessionContext, "page_sku" | "customer_logged_in" | "chat_session_id">>,
 ): SessionContext {
   return {
     store_code,
@@ -86,6 +87,7 @@ export function sessionFromStoreCode(
     page_sku: extras?.page_sku ?? null,
     customer_logged_in: extras?.customer_logged_in ?? false,
     channel: "web",
+    chat_session_id: extras?.chat_session_id ?? null,
   };
 }
 

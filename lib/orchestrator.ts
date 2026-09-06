@@ -1,7 +1,7 @@
 import { readFile } from "fs/promises";
 import path from "path";
 import { CURRENCY_AR, WEBSITE_NAME, type SessionContext } from "@/lib/stores";
-import { checkStock, getPolicy, getProduct, searchCatalog, searchOnSale, visualSearch } from "@/lib/tools";
+import { checkStock, getCurrentPromotions, getPolicy, getProduct, searchCatalog, searchOnSale, visualSearch } from "@/lib/tools";
 import type { AssistantTurn, ChatMessage, ProductCta, ProductDto, UiPayload } from "@/lib/types";
 
 const SKU_RE = /\b(\d{4,8})\b/;
@@ -18,7 +18,9 @@ const COMPLAINT_RE =
   /complain|complaint|شكوى|شكاي|damaged|broken|wrong item|missing (piece|part)|not (happy|satisfied)|unhappy|issue with|problem with|bought .{0,40}(problem|issue|wrong)/i;
 const PAY_RE = /knet|tabby|tamara|payment|دفع|كي نت/i;
 const RETURN_RE = /return|استرجاع|تبديل|refund/i;
-const OFFERS_RE = /\boffers?\b|\bon sale\b|promo|promotion|discount|deals?|عروض|(?<!م)عرض|خصم|تخفيض|weekly surprise/i;
+const OFFERS_RE = /\boffers?\b|\bon sale\b|promo|promotion|\bdeals?\b|عروض|(?<!م)عرض|تخفيض|weekly surprise/i;
+const INJECTION_RE = /ignore (all )?(previous|prior|above) instructions|reveal (the )?(system )?prompt|90%\s*off/i;
+const DISCOUNT_RE = /can you (do|give|make).{0,24}(\d+\s*%|discount)|special price for me|make it cheaper|تفاوض|خصم خاص|اعمل خصم/i;
 
 function catalogQuery(text: string) {
   return text
@@ -112,6 +114,32 @@ export async function runRulesOrchestrator(input: {
   const country = WEBSITE_NAME[session.website][lang];
   const used: string[] = [];
 
+  if (INJECTION_RE.test(last)) {
+    used.push("get_current_promotions");
+    const promo = await getCurrentPromotions(session.store_code);
+    const message =
+      lang === "ar"
+        ? "لا أستطيع عمل خصم خاص من هذه الدردشة. العروض الحالية هي الأسعار الخاصة الظاهرة في الكتالوج."
+        : "I cannot create a special discount from this chat. Current sale prices are the special prices already on this store’s catalog.";
+    return {
+      message,
+      ui: promo.ok && promo.products.length ? cards(promo.products, ["handoff"]) : emptyUi(true, "discount_request"),
+      used_tools: used,
+      engine: "rules",
+    };
+  }
+
+  if (DISCOUNT_RE.test(last)) {
+    used.push("escalate_to_human");
+    used.push("get_policy");
+    const care = getPolicy(session.store_code, "customer_care");
+    const message =
+      lang === "ar"
+        ? `لا أتفاوض على السعر من الدردشة. خدمة العملاء تتابع الطلبات الخاصة. ${care.ok ? care.text : ""}`
+        : `I cannot negotiate a price from this chat. Customer care handles special terms. ${care.ok ? care.text : ""}`;
+    return { message, ui: emptyUi(true, "discount_request"), used_tools: used, engine: "rules" };
+  }
+
   if (COMPLAINT_RE.test(last) || ORDER_RE.test(last)) {
     used.push("escalate_to_human");
     const topic = COMPLAINT_RE.test(last) ? "complaints" : "customer_care";
@@ -162,14 +190,21 @@ export async function runRulesOrchestrator(input: {
   }
 
   if (OFFERS_RE.test(last)) {
-    used.push("search_catalog");
+    used.push("get_current_promotions");
     const extra = catalogQuery(last)
       .replace(OFFERS_RE, " ")
       .replace(/\b(what|whats|which|current|available|today|week|the|any|some|do|you|have|please|show|me|on)\b/gi, " ")
       .replace(/\s+/g, " ")
       .trim();
-    const sale = await searchOnSale(session.store_code, 3, extra.length > 2 ? extra : undefined);
-    if (!sale.ok) {
+    const promo = await getCurrentPromotions(session.store_code);
+    const narrowed = extra.length > 2 ? await searchOnSale(session.store_code, 3, extra) : null;
+    const products =
+      narrowed && narrowed.ok && narrowed.products.length
+        ? narrowed.products
+        : promo.ok
+          ? promo.products
+          : [];
+    if (!products.length) {
       return {
         message:
           lang === "ar"
@@ -180,13 +215,14 @@ export async function runRulesOrchestrator(input: {
         engine: "rules",
       };
     }
-    const first = sale.products[0];
+    const first = products[0];
+    const campaign = promo.ok && promo.campaigns[0] ? ` ${promo.campaigns[0]}.` : "";
     const off = first.discount_percent ? `${first.discount_percent}%` : "";
     const message =
       lang === "ar"
-        ? `هذه من فئات العروض الحالية في متجر ${country} (خصم حي من ماجنتو، ليست نتيجة بحث عن كلمة «عروض»). مثال: ${first.name} بسعر ${money(first, "ar")}${off ? ` (خصم ${off})` : ""}.`
-        : `These are live discounted pieces from this ${country} store’s Magento sale categories — not a keyword search for the word “offers”. Example: ${first.name} at ${money(first, "en")}${off ? ` (${off} off)` : ""}.`;
-    return { message, ui: cards(sale.products), used_tools: used, engine: "rules" };
+        ? `هذه أسعار خاصة حية في متجر ${country}.${campaign} مثال: ${first.name} بسعر ${money(first, "ar")}${off ? ` (خصم ${off})` : ""}.`
+        : `Live special prices in ${country}.${campaign} Example: ${first.name} at ${money(first, "en")}${off ? ` (${off} off)` : ""}.`;
+    return { message, ui: cards(products), used_tools: used, engine: "rules" };
   }
 
   const policyMap: Array<[RegExp, string]> = [

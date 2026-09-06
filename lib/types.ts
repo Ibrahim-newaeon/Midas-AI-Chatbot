@@ -20,6 +20,7 @@ export type ProductDto = {
   color: string | null;
   material: string | null;
   dimensions: string | null;
+  fetched_at?: string;
   match_type?: MatchType;
 };
 

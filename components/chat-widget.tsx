@@ -84,6 +84,9 @@ export function ChatWidget() {
   const session = useMemo(() => sessionFromStoreCode(store), [store]);
   const ar = session.language === "ar";
   const dir = ar ? "rtl" : "ltr";
+  const chatSessionId = useRef(
+    typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : `web-${Date.now()}`,
+  );
 
   useEffect(() => {
     let cancelled = false;
@@ -123,7 +126,7 @@ export function ChatWidget() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          session,
+          session: { ...session, chat_session_id: chatSessionId.current },
           messages: nextMessages.map(({ role, content }) => ({ role, content })),
           image_data_url: dataUrl,
         }),
@@ -211,6 +214,7 @@ export function ChatWidget() {
                     type="button"
                     disabled={pending}
                     className={`midas-btn-pill ${ar ? "tracking-normal" : "uppercase tracking-[0.03em]"}`}
+                    data-testid={`suggest-${s}`}
                     onClick={(e) => {
                       e.preventDefault();
                       e.stopPropagation();
@@ -311,7 +315,7 @@ export function ChatWidget() {
               }
             }}
           />
-          <Button type="submit" size="icon" disabled={pending} aria-label="Send">
+          <Button type="submit" size="icon" disabled={pending} aria-label="Send" data-testid="chat-send">
             <Send className="size-4" />
           </Button>
         </div>
