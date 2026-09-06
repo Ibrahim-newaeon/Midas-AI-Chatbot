@@ -53,6 +53,6 @@ Catalog API (already public): `POST https://midasfurniture.com/graphql` with hea
 4. Tools: Magento GraphQL behind middleware (`search_catalog`, `visual_search`, `get_product`, `check_stock`, `get_policy`, …).
 5. Assistant: `message` + `ui.products` copied from tool JSON.
 
-## Next build step (not in this repo yet)
+## What is next
 
-Middleware that translates tool JSON → Magento GraphQL, plus a Magento widget that sends `store_code` and renders product cards (`view`, `add_to_cart`, `handoff` only).
+See [`docs/next-steps.md`](docs/next-steps.md). Immediate build: Magento GraphQL middleware — [`docs/middleware-api.md`](docs/middleware-api.md). Launch bar: [`docs/stress-tests.md`](docs/stress-tests.md).
