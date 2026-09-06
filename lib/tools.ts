@@ -14,6 +14,39 @@ function badStore(store_code: string): ToolErr {
   return { ok: false, error: "invalid_store", detail: store_code };
 }
 
+function tokenize(text: string) {
+  return text
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}\s]/gu, " ")
+    .split(/\s+/)
+    .filter((t) => t.length > 2 && !["the", "and", "for", "with", "this", "have", "something", "like", "هل", "عندكم"].includes(t));
+}
+
+function rankProducts(products: ProductDto[], search: string, room?: string | null) {
+  const tokens = tokenize(search);
+  const majlis = isMajlisQuery(search, room);
+  const scored = products.map((p) => {
+    const hay = `${p.name} ${p.brand ?? ""} ${p.categories.join(" ")}`.toLowerCase();
+    let score = 0;
+    for (const t of tokens) {
+      if (hay.includes(t)) score += 3;
+    }
+    if (/chair|كرسي/.test(search) && /chair|كرسي/.test(hay)) score += 8;
+    if (/sofa|sectional|كنب/.test(search) && /sofa|sectional|recliner|كنب/.test(hay)) score += 8;
+    if (/kare|كاري/.test(search) && /kare|كاري/.test(hay)) score += 6;
+    if (/ashley|آشلي|اشلي/.test(search) && /ashley|آشلي|اشلي/.test(hay)) score += 6;
+    if (majlis) {
+      if (/dining|طعام|سفرة/.test(hay)) score -= 12;
+      if (/sofa|sectional|recliner|loveseat|chair|coffee|centre|center|كنب|كرسي|وسط/.test(hay)) score += 6;
+    }
+    if (p.stock_status === "IN_STOCK") score += 1;
+    return { p, score };
+  });
+  scored.sort((a, b) => b.score - a.score);
+  return scored.filter((s) => s.score > 0 || tokens.length === 0).map((s) => s.p);
+}
+
+
 export async function searchCatalog(
   input: SearchCatalogInput,
 ): Promise<ToolOk<{ store_code: StoreCode; currency: string; products: ProductDto[] }> | ToolErr> {
@@ -22,7 +55,14 @@ export async function searchCatalog(
   const pageSize = Math.min(Math.max(input.page_size ?? 6, 1), 12);
   const search = buildSearchText(input);
   try {
-    const raw = await searchMagento(store, search, pageSize * 2);
+    let raw = await searchMagento(store, search, Math.max(pageSize * 5, 20));
+    if (isMajlisQuery(input.query, input.room)) {
+      const extra = await searchMagento(store, "sofa sectional recliner living", 12);
+      const seen = new Set(raw.map((p) => p.sku));
+      for (const p of extra) {
+        if (!seen.has(p.sku)) raw.push(p);
+      }
+    }
     let products = await Promise.all(raw.map((p) => toProductDto(store, p)));
     if (input.in_stock_only !== false) {
       products = products.filter((p) => p.stock_status === "IN_STOCK");
@@ -39,6 +79,8 @@ export async function searchCatalog(
       const seating = products.filter((p) => !/dining|طعام|سفرة/i.test([p.name, ...p.categories].join(" ")));
       if (seating.length) products = seating;
     }
+    const ranked = rankProducts(products, search, input.room);
+    if (ranked.length) products = ranked;
     return {
       ok: true,
       store_code: input.store_code,

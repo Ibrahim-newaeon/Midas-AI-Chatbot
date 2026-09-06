@@ -14,6 +14,17 @@ const HOURS_RE = /hours|open|ساعات|دوام|فرع|showroom|معرض/i;
 const PAY_RE = /knet|tabby|tamara|payment|دفع|كي نت/i;
 const RETURN_RE = /return|استرجاع|تبديل|refund/i;
 
+function catalogQuery(text: string) {
+  return text
+    .replace(/i saw this in kuwait[^.?!]*/i, " ")
+    .replace(/\d+([.,]\d+)?\s*(kwd|qar|sar|jod|bhd|د\.ك)/gi, " ")
+    .replace(/same price\??/i, " ")
+    .replace(/do you have (something like this|a|an)?/i, " ")
+    .replace(/هل عندكم شي يناسب/g, "مجلس")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 function replyLanguage(session: SessionContext, text: string): "en" | "ar" {
   if (ARABIC_RE.test(text)) return "ar";
   return session.language;
@@ -198,9 +209,10 @@ export async function runRulesOrchestrator(input: {
 
   const kwdTrap = /kwd|د\.ك|kuwait price|سعر الكويت/i.test(last) && session.website !== "kuwait";
   used.push("search_catalog");
+  const query = catalogQuery(last) || last || visionQuery || "furniture";
   const result = await searchCatalog({
     store_code: session.store_code,
-    query: last || visionQuery || "furniture",
+    query,
     room: /majlis|مجلس|ديوان/i.test(last) ? "majlis" : null,
     brand: /kare|كاري/i.test(last) ? "Kare" : /ashley|آشلي|اشلي/i.test(last) ? "Ashley" : null,
     in_stock_only: true,
