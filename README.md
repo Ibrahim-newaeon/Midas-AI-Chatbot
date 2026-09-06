@@ -7,8 +7,8 @@ Website shopping assistant for [Midas Furniture](https://midasfurniture.com/). I
 You need **Node.js 20+** and npm.
 
 ```bash
-git clone <your-github-repo-url>
-cd <repo>
+git clone https://github.com/Ibrahim-newaeon/Midas-AI-Chatbot.git
+cd Midas-AI-Chatbot
 npm install
 npm run dev
 ```
