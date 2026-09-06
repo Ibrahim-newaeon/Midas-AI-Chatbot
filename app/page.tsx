@@ -6,7 +6,7 @@ export default function Home() {
       <div className="mx-auto flex w-full max-w-5xl flex-1 flex-col gap-6 px-4 py-6 sm:py-10">
         <header className="space-y-2">
           <p className="text-xs tracking-[0.2em] text-muted-foreground uppercase">Midas Furniture · GCC</p>
-          <h1 className="font-[family-name:var(--font-serif)] text-4xl leading-tight sm:text-5xl">
+          <h1 className="font-heading text-4xl leading-tight sm:text-5xl">
             Midas AI website assistant
           </h1>
           <p className="max-w-2xl text-muted-foreground">

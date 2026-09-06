@@ -169,10 +169,10 @@ export function ChatWidget() {
   }
 
   return (
-    <div dir={dir} className={`flex min-h-[min(720px,calc(100dvh-2rem))] flex-col overflow-hidden rounded-2xl border bg-card shadow-sm ${ar ? "font-[family-name:var(--font-arabic)]" : ""}`}>
+    <div dir={dir} className="flex min-h-[min(720px,calc(100dvh-2rem))] flex-col overflow-hidden rounded-2xl border bg-card shadow-sm">
       <header className="flex flex-col gap-3 border-b bg-[color-mix(in_oklch,var(--card),var(--accent)_12%)] px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <p className="flex items-center gap-2 font-[family-name:var(--font-serif)] text-xl tracking-tight">
+          <p className="flex items-center gap-2 font-heading text-xl tracking-tight">
             <Sparkles className="size-4" />
             Midas AI
           </p>
@@ -204,7 +204,7 @@ export function ChatWidget() {
         <div className="space-y-4 p-4">
           {messages.length === 0 ? (
             <div className="space-y-3 py-6 text-center">
-              <p className="font-[family-name:var(--font-serif)] text-2xl">
+              <p className="font-heading text-2xl">
                 {ar ? "من الإلهام إلى القطعة المناسبة" : "From a room idea to the right piece"}
               </p>
               <p className="mx-auto max-w-md text-sm text-muted-foreground">

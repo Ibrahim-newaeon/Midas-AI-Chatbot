@@ -6,6 +6,9 @@
     "dev": "next dev -p 43217 -H 0.0.0.0",
     "build": "next build",
     "start": "next start -p 43217 -H 0.0.0.0",
+    "preview": "next build && next start -p 43217 -H 0.0.0.0",
+    "build": "next build",
+    "start": "next start -p 43217 -H 0.0.0.0",
     "lint": "eslint"
   },
   "dependencies": {

@@ -48,6 +48,7 @@ async function magentoGraphql<T>(store: StoreCode, query: string, variables?: Re
     },
     body: JSON.stringify({ query, variables }),
     cache: "no-store",
+    signal: AbortSignal.timeout(8000),
   });
   if (!res.ok) {
     throw new Error(`Magento HTTP ${res.status}`);
