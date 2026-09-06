@@ -3,7 +3,9 @@ import {
   buildSearchText,
   getMagentoBySku,
   isMajlisQuery,
+  listSaleCategories,
   searchMagento,
+  searchMagentoByCategoryIds,
   sessionFor,
   toProductDto,
 } from "@/lib/magento";
@@ -96,35 +98,66 @@ export async function searchCatalog(
 
 export async function searchOnSale(store_code: StoreCode, page_size = 3, extraQuery?: string) {
   if (!isStoreCode(store_code)) return badStore(store_code);
-  const queries = extraQuery?.trim()
-    ? [extraQuery]
-    : ["sofa", "dining", "bedroom"];
-  const batches = await Promise.all(
-    queries.map((query) =>
-      searchCatalog({
-        store_code,
-        query,
-        in_stock_only: true,
-        page_size: 8,
-      }),
-    ),
-  );
+  const store = sessionFor(store_code);
+  const extra = extraQuery?.trim();
   const bySku = new Map<string, ProductDto>();
-  for (const batch of batches) {
-    if (!batch.ok) continue;
-    for (const product of batch.products) {
-      if (product.final_price < product.regular_price) {
-        bySku.set(product.sku, product);
+
+  try {
+    const categories = await listSaleCategories(store_code);
+    if (categories.length) {
+      const raw = await searchMagentoByCategoryIds(
+        store,
+        categories.map((c) => String(c.id)),
+        16,
+      );
+      const mapped = await Promise.all(raw.map((p) => toProductDto(store, p)));
+      for (const product of mapped) {
+        if (product.stock_status === "IN_STOCK" && product.final_price < product.regular_price) {
+          bySku.set(product.sku, product);
+        }
+      }
+    }
+  } catch {
+    // Fall through to keyword sale search.
+  }
+
+  if (bySku.size < page_size) {
+    const queries = extra ? [extra] : ["sofa", "dining", "bedroom"];
+    const batches = await Promise.all(
+      queries.map((query) =>
+        searchCatalog({
+          store_code,
+          query,
+          in_stock_only: true,
+          page_size: 8,
+        }),
+      ),
+    );
+    for (const batch of batches) {
+      if (!batch.ok) continue;
+      for (const product of batch.products) {
+        if (product.final_price < product.regular_price) {
+          bySku.set(product.sku, product);
+        }
       }
     }
   }
-  const products = [...bySku.values()].sort(
+
+  let products = [...bySku.values()];
+  if (extra) {
+    const tokens = tokenize(extra);
+    const narrowed = products.filter((p) => {
+      const hay = `${p.name} ${p.categories.join(" ")}`.toLowerCase();
+      return tokens.some((t) => hay.includes(t));
+    });
+    if (narrowed.length) products = narrowed;
+  }
+  products.sort(
     (a, b) => (b.discount_percent ?? 0) - (a.discount_percent ?? 0) || a.final_price - b.final_price,
   );
   if (!products.length) {
     return { ok: false as const, error: "no_sale_items" as const, store_code };
   }
-  const store = sessionFor(store_code);
   return {
     ok: true as const,
     store_code,

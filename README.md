@@ -32,8 +32,9 @@ Optional `env.example` values:
 ## What is implemented
 
 - Store-aware session (`en`, `ar`, `qtr_en`, `ksa_ar`, …) with KWD / QAR / SAR / JOD / BHD
-- Tools: `search_catalog`, `get_product`, `check_stock`, `get_policy`
-- Chat UI with product cards that open the real Midas PDP
+- Tools: `search_catalog`, `get_product`, `check_stock`, `get_policy`, sale-category offers
+- Chat UI styled like the Magento storefront (logo, sale red `#b22020`, product cards with % badges)
+- “What’s on offer?” reads live Magento sale categories — not a keyword search for the word “offers”
 - Majlis queries search seating, not dining
 - No invented SKUs, no AR, no cross-country stock
 

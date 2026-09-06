@@ -159,8 +159,8 @@ export async function runRulesOrchestrator(input: {
     const off = first.discount_percent ? `${first.discount_percent}%` : "";
     const message =
       lang === "ar"
-        ? `هذه قطع عليها خصم الآن في ${country} حسب السعر الحي في الموقع. مثال: ${first.name} بسعر ${money(first, "ar")}${off ? ` (خصم ${off})` : ""}.`
-        : `Current sale prices in ${country} from the live catalog. Example: ${first.name} at ${money(first, "en")}${off ? ` (${off} off)` : ""}.`;
+        ? `هذه من فئات العروض الحالية في متجر ${country} (خصم حي من ماجنتو، ليست نتيجة بحث عن كلمة «عروض»). مثال: ${first.name} بسعر ${money(first, "ar")}${off ? ` (خصم ${off})` : ""}.`
+        : `These are live discounted pieces from this ${country} store’s Magento sale categories — not a keyword search for the word “offers”. Example: ${first.name} at ${money(first, "en")}${off ? ` (${off} off)` : ""}.`;
     return { message, ui: cards(sale.products), used_tools: used, engine: "rules" };
   }
 

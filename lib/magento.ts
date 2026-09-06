@@ -153,6 +153,49 @@ export async function searchMagento(
   return data.products.items ?? [];
 }
 
+const SALE_CATEGORY_TERMS = ["sale", "offer", "deal", "flash", "عروض", "خصم"];
+
+export async function listSaleCategories(store: StoreCode): Promise<Array<{ id: number; name: string }>> {
+  const batches = await Promise.all(
+    SALE_CATEGORY_TERMS.map((term) =>
+      magentoGraphql<{ categoryList: Array<{ id: number; name: string } | null> | null }>(
+        store,
+        `query Cats($name: String!) {
+          categoryList(filters: { name: { match: $name } }) { id name }
+        }`,
+        { name: term },
+      ).catch(() => ({ categoryList: [] })),
+    ),
+  );
+  const byId = new Map<number, { id: number; name: string }>();
+  for (const batch of batches) {
+    for (const cat of batch.categoryList ?? []) {
+      if (!cat?.id || !cat.name) continue;
+      if (!/sale|offer|deal|flash|عروض|خصم|توفير|savings/i.test(cat.name)) continue;
+      byId.set(cat.id, { id: cat.id, name: cat.name });
+    }
+  }
+  return [...byId.values()];
+}
+
+export async function searchMagentoByCategoryIds(
+  store: SessionContext,
+  categoryIds: string[],
+  pageSize = 12,
+): Promise<MagentoProduct[]> {
+  if (!categoryIds.length) return [];
+  const data = await magentoGraphql<{ products: { items: MagentoProduct[] } }>(
+    store.store_code,
+    `query ByCats($ids: [String!]!, $pageSize: Int!) {
+      products(filter: { category_id: { in: $ids } }, pageSize: $pageSize) {
+        items { ${PRODUCT_FIELDS} }
+      }
+    }`,
+    { ids: categoryIds, pageSize },
+  );
+  return data.products.items ?? [];
+}
+
 export async function getMagentoBySku(store: SessionContext, sku: string): Promise<MagentoProduct | null> {
   const data = await magentoGraphql<{ products: { items: MagentoProduct[] } }>(
     store.store_code,
