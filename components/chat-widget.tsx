@@ -107,6 +107,8 @@ export function ChatWidget() {
   const [error, setError] = useState<string | null>(null);
   const [messages, setMessages] = useState<Bubble[]>([]);
   const fileRef = useRef<HTMLInputElement>(null);
+  const pendingRef = useRef(false);
+  const messagesRef = useRef<Bubble[]>([]);
 
   const session = useMemo(() => sessionFromStoreCode(store), [store]);
   const ar = session.language === "ar";
@@ -115,10 +117,17 @@ export function ChatWidget() {
   async function send(text: string, dataUrl = image) {
     const content = text.trim();
     if (!content && !dataUrl) return;
+    if (pendingRef.current) return;
+    pendingRef.current = true;
     setError(null);
     setPending(true);
-    const userBubble: Bubble = { role: "user", content: content || (ar ? "صورة للبحث" : "Photo search"), imagePreview: dataUrl ?? undefined };
-    const nextMessages = [...messages, userBubble];
+    const userBubble: Bubble = {
+      role: "user",
+      content: content || (ar ? "صورة للبحث" : "Photo search"),
+      imagePreview: dataUrl ?? undefined,
+    };
+    const nextMessages = [...messagesRef.current, userBubble];
+    messagesRef.current = nextMessages;
     setMessages(nextMessages);
     setInput("");
     setImage(null);
@@ -136,13 +145,18 @@ export function ChatWidget() {
       if (!res.ok || !json.ok) {
         throw new Error(json.message || json.error || "Chat failed");
       }
-      setMessages((prev) => [
-        ...prev,
-        { role: "assistant", content: json.message as string, ui: json.ui as AssistantTurn["ui"] },
-      ]);
+      const assistant: Bubble = {
+        role: "assistant",
+        content: json.message as string,
+        ui: json.ui as AssistantTurn["ui"],
+      };
+      const withReply = [...messagesRef.current, assistant];
+      messagesRef.current = withReply;
+      setMessages(withReply);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Chat failed");
     } finally {
+      pendingRef.current = false;
       setPending(false);
     }
   }
@@ -173,6 +187,7 @@ export function ChatWidget() {
             value={store}
             onChange={(e) => {
               setStore(e.target.value as StoreCode);
+              messagesRef.current = [];
               setMessages([]);
             }}
           >
@@ -199,9 +214,19 @@ export function ChatWidget() {
               </p>
               <div className="flex flex-wrap justify-center gap-2 pt-2">
                 {SUGGESTIONS[ar ? "ar" : "en"].map((s) => (
-                  <Button key={s} variant="outline" size="sm" onClick={() => send(s)}>
+                  <button
+                    key={s}
+                    type="button"
+                    disabled={pending}
+                    className={cn(buttonVariants({ variant: "outline", size: "sm" }))}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      void send(s);
+                    }}
+                  >
                     {s}
-                  </Button>
+                  </button>
                 ))}
               </div>
             </div>
