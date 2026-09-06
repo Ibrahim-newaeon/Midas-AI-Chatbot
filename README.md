@@ -4,13 +4,25 @@ Website shopping assistant for [Midas Furniture](https://midasfurniture.com/). I
 
 ## Run locally
 
+You need **Node.js 20+** and npm.
+
 ```bash
+git clone <your-github-repo-url>
+cd <repo>
 npm install
+npm run dev
+```
+
+Then open **http://localhost:43217** in your browser (Chrome or Safari). That is faster and more reliable than the cloud Preview card.
+
+`npm run dev` is the day-to-day command. Use this only if you want a production-style local server:
+
+```bash
 npm run build
 npm start
 ```
 
-Opens on [http://127.0.0.1:43217](http://127.0.0.1:43217).
+No API key is required for text search. Magento is called from this Next.js server, not from the browser.
 
 Optional `env.example` values:
 
