@@ -6,7 +6,8 @@ Website shopping assistant for [Midas Furniture](https://midasfurniture.com/). I
 
 ```bash
 npm install
-npm run dev
+npm run build
+npm start
 ```
 
 Opens on [http://127.0.0.1:43217](http://127.0.0.1:43217).
