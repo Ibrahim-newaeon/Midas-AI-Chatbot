@@ -94,6 +94,45 @@ export async function searchCatalog(
   }
 }
 
+export async function searchOnSale(store_code: StoreCode, page_size = 3, extraQuery?: string) {
+  if (!isStoreCode(store_code)) return badStore(store_code);
+  const queries = extraQuery?.trim()
+    ? [extraQuery]
+    : ["sofa", "dining", "bedroom"];
+  const batches = await Promise.all(
+    queries.map((query) =>
+      searchCatalog({
+        store_code,
+        query,
+        in_stock_only: true,
+        page_size: 8,
+      }),
+    ),
+  );
+  const bySku = new Map<string, ProductDto>();
+  for (const batch of batches) {
+    if (!batch.ok) continue;
+    for (const product of batch.products) {
+      if (product.final_price < product.regular_price) {
+        bySku.set(product.sku, product);
+      }
+    }
+  }
+  const products = [...bySku.values()].sort(
+    (a, b) => (b.discount_percent ?? 0) - (a.discount_percent ?? 0) || a.final_price - b.final_price,
+  );
+  if (!products.length) {
+    return { ok: false as const, error: "no_sale_items" as const, store_code };
+  }
+  const store = sessionFor(store_code);
+  return {
+    ok: true as const,
+    store_code,
+    currency: store.currency,
+    products: products.slice(0, page_size),
+  };
+}
+
 export async function getProduct(store_code: StoreCode, sku: string) {
   if (!isStoreCode(store_code)) return badStore(store_code);
   const store = sessionFor(store_code);

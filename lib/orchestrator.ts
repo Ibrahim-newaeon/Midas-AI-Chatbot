@@ -1,7 +1,7 @@
 import { readFile } from "fs/promises";
 import path from "path";
 import { CURRENCY_AR, WEBSITE_NAME, type SessionContext } from "@/lib/stores";
-import { checkStock, getPolicy, getProduct, searchCatalog, visualSearch } from "@/lib/tools";
+import { checkStock, getPolicy, getProduct, searchCatalog, searchOnSale, visualSearch } from "@/lib/tools";
 import type { AssistantTurn, ChatMessage, ProductCta, ProductDto, UiPayload } from "@/lib/types";
 
 const SKU_RE = /\b(\d{4,8})\b/;
@@ -13,6 +13,7 @@ const WALLET_RE = /wallet|محفظة|midas cash/i;
 const HOURS_RE = /hours|open|ساعات|دوام|فرع|showroom|معرض/i;
 const PAY_RE = /knet|tabby|tamara|payment|دفع|كي نت/i;
 const RETURN_RE = /return|استرجاع|تبديل|refund/i;
+const OFFERS_RE = /\boffers?\b|\bon sale\b|promo|promotion|discount|deals?|عروض|عرض|خصم|تخفيض|weekly surprise/i;
 
 function catalogQuery(text: string) {
   return text
@@ -133,6 +134,34 @@ export async function runRulesOrchestrator(input: {
         ? `لا أستطيع عرض حالة الشحنة من هنا. مرّر رقم الطلب إلى خدمة العملاء. ${care.ok ? care.text : ""}`
         : `I cannot see live tracking from this chat. I will flag this for customer care with your order number. ${care.ok ? care.text : ""}`;
     return { message, ui: emptyUi(true, "order_status"), used_tools: used, engine: "rules" };
+  }
+
+  if (OFFERS_RE.test(last)) {
+    used.push("search_catalog");
+    const extra = catalogQuery(last)
+      .replace(OFFERS_RE, " ")
+      .replace(/\b(what|whats|which|current|available|today|week|the|any|some|do|you|have|please|show|me|on)\b/gi, " ")
+      .replace(/\s+/g, " ")
+      .trim();
+    const sale = await searchOnSale(session.store_code, 3, extra.length > 2 ? extra : undefined);
+    if (!sale.ok) {
+      return {
+        message:
+          lang === "ar"
+            ? `لم أجد قطعاً مخفّضة مؤكدة في ${country} من الكتالوج الآن. اسأل عن غرفة معيّنة مثل غرفة المعيشة أو السفرة.`
+            : `I could not confirm discounted pieces in ${country} from the live catalog just now. Ask about a room — living, dining, or bedroom — and I will check sale prices there.`,
+        ui: emptyUi(),
+        used_tools: used,
+        engine: "rules",
+      };
+    }
+    const first = sale.products[0];
+    const off = first.discount_percent ? `${first.discount_percent}%` : "";
+    const message =
+      lang === "ar"
+        ? `هذه قطع عليها خصم الآن في ${country} حسب السعر الحي في الموقع. مثال: ${first.name} بسعر ${money(first, "ar")}${off ? ` (خصم ${off})` : ""}.`
+        : `Current sale prices in ${country} from the live catalog. Example: ${first.name} at ${money(first, "en")}${off ? ` (${off} off)` : ""}.`;
+    return { message, ui: cards(sale.products), used_tools: used, engine: "rules" };
   }
 
   const policyMap: Array<[RegExp, string]> = [

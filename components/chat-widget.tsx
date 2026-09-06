@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useRef, useState } from "react";
-import { ImagePlus, Loader2, Send, Sparkles } from "lucide-react";
+import { ImagePlus, Loader2, Send } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -18,16 +18,16 @@ type Bubble = ChatMessage & {
 
 const SUGGESTIONS: Record<"en" | "ar", string[]> = {
   en: [
-    "Kare accent chair in gold and green",
+    "What's on offer?",
     "Sofa for a small majlis",
+    "Kare accent chair",
     "Is delivery free?",
-    "Do you customize fabric?",
   ],
   ar: [
+    "شنو العروض الحالية؟",
     "عندي مساحة مجلس صغيرة، هل عندكم شي يناسب؟",
-    "كرسي كاري مخمل",
+    "كرسي كاري",
     "هل التوصيل مجاني؟",
-    "تقدرون تفصّلون القماش؟",
   ],
 };
 
@@ -60,12 +60,17 @@ function ProductCard({ product, ar }: { product: ProductDto & { title: string };
           ) : null}
           <p className="font-medium leading-snug">{product.title}</p>
           <div className="flex flex-wrap items-baseline gap-2 text-sm">
-            <span className="font-semibold">
+            <span className="font-semibold text-[#121111]">
               {price.n} {price.cur}
             </span>
             {price.onSale ? (
-              <span className="text-muted-foreground line-through">
+              <span className="text-[#606060] line-through">
                 {price.was} {price.cur}
+              </span>
+            ) : null}
+            {product.discount_percent ? (
+              <span className="bg-[#b22020] px-1.5 py-0.5 text-[10px] font-semibold text-white">
+                {product.discount_percent}%
               </span>
             ) : null}
           </div>
@@ -169,15 +174,12 @@ export function ChatWidget() {
   }
 
   return (
-    <div dir={dir} className="flex min-h-[min(720px,calc(100dvh-2rem))] flex-col overflow-hidden rounded-2xl border bg-card shadow-sm">
-      <header className="flex flex-col gap-3 border-b bg-[color-mix(in_oklch,var(--card),var(--accent)_12%)] px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+    <div dir={dir} className="flex min-h-[min(720px,calc(100dvh-2rem))] flex-col overflow-hidden rounded-sm border border-[#e9e9e9] bg-white shadow-sm">
+      <header className="flex flex-col gap-3 border-b border-[#e9e9e9] bg-white px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <p className="flex items-center gap-2 font-heading text-xl tracking-tight">
-            <Sparkles className="size-4" />
-            Midas AI
-          </p>
-          <p className="text-xs text-muted-foreground">
-            {ar ? "مساعد التسوق — كتالوج ميداس المباشر لهذا المتجر" : "Website assistant — live Magento catalog for this store"}
+          <p className="text-lg font-semibold tracking-tight text-[#121111]">Midas AI</p>
+          <p className="text-xs text-[#606060]">
+            {ar ? "مساعد التسوق الرسمي — كتالوج ميداس لهذا المتجر" : "Official shopping assistant — this store’s live catalog"}
           </p>
         </div>
         <label className="text-xs">
@@ -204,13 +206,13 @@ export function ChatWidget() {
         <div className="space-y-4 p-4">
           {messages.length === 0 ? (
             <div className="space-y-3 py-6 text-center">
-              <p className="font-heading text-2xl">
-                {ar ? "من الإلهام إلى القطعة المناسبة" : "From a room idea to the right piece"}
+              <p className="text-2xl font-semibold text-[#121111]">
+                {ar ? "لا تتنازل، أنت تستحق الأفضل" : "Don't compromise, you deserve the finest"}
               </p>
-              <p className="mx-auto max-w-md text-sm text-muted-foreground">
+              <p className="mx-auto max-w-md text-sm text-[#606060]">
                 {ar
-                  ? "أسعار ومخزون هذا المتجر فقط. لا تحويل عملات، ولا تفصيل، ولا شحن بين الدول."
-                  : "Prices and stock are for this store view only. No currency conversion, no custom fabrics, no cross-country warehouse transfers."}
+                  ? "اسأل عن العروض، غرفة، أو أرفق صورة. الأسعار والمخزون حسب الدولة المختارة."
+                  : "Ask about current offers, a room, or attach a photo. Prices and stock follow the country you select."}
               </p>
               <div className="flex flex-wrap justify-center gap-2 pt-2">
                 {SUGGESTIONS[ar ? "ar" : "en"].map((s) => (
@@ -236,8 +238,8 @@ export function ChatWidget() {
             <div key={`${m.role}-${i}`} className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}>
               <div className={`max-w-[min(100%,36rem)] space-y-3 ${m.role === "user" ? "text-end" : ""}`}>
                 <div
-                  className={`rounded-2xl px-3 py-2 text-sm leading-relaxed ${
-                    m.role === "user" ? "bg-primary text-primary-foreground" : "bg-muted"
+                  className={`rounded-sm px-3 py-2 text-sm leading-relaxed ${
+                    m.role === "user" ? "bg-[#121111] text-white" : "bg-[#f5f5f5] text-[#121111]"
                   }`}
                 >
                   {m.imagePreview ? (
