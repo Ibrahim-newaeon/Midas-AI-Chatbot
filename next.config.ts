@@ -4,6 +4,7 @@ const NORD =
   "https://midasfurniture.com/static/frontend/Brainvire/midasfurniture/en_US/fonts/nord";
 
 const nextConfig: NextConfig = {
+  trailingSlash: true,
   allowedDevOrigins: ["127.0.0.1", "localhost"],
   images: {
     remotePatterns: [{ protocol: "https", hostname: "midasfurniture.com" }],
