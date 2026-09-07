@@ -42,7 +42,7 @@ http://localhost:43217/ksa_en/      KSA English
 http://localhost:43217/jo_en/       Jordan English (LONDER is out of stock here)
 ```
 
-Each country has **English + Arabic** homes. Each home lists two PDPs (LONDER bedroom set `154534`, OVALO sofa `170423`). Prices are fixtures per website, not currency conversions.
+Each country has **English + Arabic** homes. Each home lists **eight products per department** (Living, Dining, Bedrooms) plus eight Offers. LONDER bedroom set `154534` and OVALO sofa `170423` are still in the fixture set. Prices are fixtures per website, not currency conversions. Category URLs: `/{store}/living`, `/{store}/dining`, `/{store}/bedrooms`, `/{store}/offers`.
 
 Chat on those pages sends `catalog: "mirror"` and reads mock GraphQL (`/api/graphql`, same `Store` header). Chat on `/` still uses live `midasfurniture.com/graphql`.
 

@@ -7,8 +7,9 @@ export default function DemoHub() {
     <div className="mx-auto max-w-3xl space-y-6 px-4 py-10">
       <p className="font-display text-[36px] leading-tight text-ink">Magento mirror</p>
       <p className="text-[15px] text-text-muted">
-        A rehearsal storefront for Midas AI. Two pages per country (English and Arabic). Catalog, prices, and
-        cart are fixtures — not live Midas checkout. The assistant on <code>/</code> still talks to real Magento.
+        A rehearsal storefront for Midas AI. English and Arabic homes per country, with eight Living, Dining,
+        and Bedroom pieces plus eight Offers. Catalog, prices, and cart are fixtures — not live Midas checkout.
+        The assistant on <code>/</code> still talks to real Magento.
       </p>
       <ul className="space-y-4">
         {WEBSITES.map((website) => {
@@ -30,8 +31,7 @@ export default function DemoHub() {
         })}
       </ul>
       <p className="text-[13px] text-text-muted">
-        Minimum promised: 8 pages (4 countries × English/Arabic). Bahrain is included the same way (10 storefronts).
-        Each storefront home lists two PDPs.
+        Ten storefronts (5 countries × English/Arabic). Each home lists eight products per department.
       </p>
     </div>
   );

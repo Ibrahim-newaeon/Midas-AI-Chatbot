@@ -1,9 +1,14 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { expandArabiziLexicon, expandSearchQueries, normalizeArabic } from "./arabicNormalize.ts";
 import { fomoLine, identityReply, pieceHeadline } from "./productCopy.ts";
 import { parseMidasProductUrl } from "./productLink.ts";
 import { verifySendGate, type ProductTruth } from "./verifier.ts";
+
+const catalogSrc = readFileSync(join(dirname(fileURLToPath(import.meta.url)), "mirrorCatalog.ts"), "utf8");
 
 test("arabic hamza variants collapse", () => {
   assert.equal(normalizeArabic("أريكة"), normalizeArabic("اريكة"));
@@ -103,6 +108,18 @@ test("send-gate allows grounded Kuwait price", () => {
   assert.equal(v.ok, true);
 });
 
+test("send-gate blocks KWD on Jordan session", () => {
+  const v = verifySendGate(
+    {
+      message: "This is 84 KWD.",
+      ui: { products: [], ctas: [], handoff: { show: false, reason: null } },
+    },
+    [fact({ storeCode: "jo_en", currency: "JOD", finalPrice: 84, regularPrice: 84, sku: "1" })],
+    "jo_en",
+  );
+  assert.equal(v.ok, false);
+});
+
 test("send-gate allows OOS identity without add_to_cart", () => {
   const v = verifySendGate(
     {
@@ -176,6 +193,19 @@ const londer = {
 
 test("identity headline uses collection plus category", () => {
   assert.equal(pieceHeadline(londer, "en"), "LONDER Bedroom Set");
+});
+
+test("mirror catalog has eight products in each department", () => {
+  assert.equal([...catalogSrc.matchAll(/department: "living"/g)].length, 8);
+  assert.equal([...catalogSrc.matchAll(/department: "dining"/g)].length, 8);
+  assert.equal([...catalogSrc.matchAll(/department: "bedrooms"/g)].length, 8);
+  assert.equal([...catalogSrc.matchAll(/sku: "/g)].length, 24);
+  assert.equal([...catalogSrc.matchAll(/\], true\)/g)].length, 8);
+});
+
+test("mirror keeps LONDER Kuwait fixture and Jordan out of stock", () => {
+  assert.match(catalogSrc, /sku: "154534"/);
+  assert.match(catalogSrc, /book\(\[995, 495\], \[3900, 2100\], \[4280, 2490\], \[355, 189\], \[118, 64\], \["jordan"\]\)/);
 });
 
 test("identity reply includes SKU, sale price, FOMO, and add to cart", () => {

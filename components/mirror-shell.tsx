@@ -47,10 +47,10 @@ export function MirrorShell({
             <img src={LOGO} alt="Midas Furniture" className="h-11 w-auto" />
           </a>
           <nav className="hidden items-center gap-6 text-[12px] font-semibold tracking-[0.03em] text-ink uppercase md:flex">
-            <a href={`/${store}/`}>{ar ? "المعيشة" : "Living"}</a>
-            <a href={`/${store}/`}>{ar ? "السفرة" : "Dining"}</a>
-            <a href={`/${store}/`}>{ar ? "غرف النوم" : "Bedrooms"}</a>
-            <a href={`/${store}/#offers`} className="text-accent-red">
+            <a href={`/${store}/living`}>{ar ? "المعيشة" : "Living"}</a>
+            <a href={`/${store}/dining`}>{ar ? "السفرة" : "Dining"}</a>
+            <a href={`/${store}/bedrooms`}>{ar ? "غرف النوم" : "Bedrooms"}</a>
+            <a href={`/${store}/offers`} className="text-accent-red">
               {ar ? "عروض" : "Offers"}
             </a>
           </nav>
@@ -83,6 +83,14 @@ export function MirrorShell({
           <span className="ms-auto text-text-muted">
             {STORE_LABELS[store]} · {session.currency} · {country}
           </span>
+        </div>
+        <div className="mx-auto flex max-w-6xl gap-3 overflow-x-auto px-4 pb-2 text-[12px] font-semibold uppercase md:hidden">
+          <a href={`/${store}/living`}>{ar ? "المعيشة" : "Living"}</a>
+          <a href={`/${store}/dining`}>{ar ? "السفرة" : "Dining"}</a>
+          <a href={`/${store}/bedrooms`}>{ar ? "النوم" : "Bedrooms"}</a>
+          <a href={`/${store}/offers`} className="text-accent-red">
+            {ar ? "عروض" : "Offers"}
+          </a>
         </div>
       </div>
       <div className="bg-accent-red py-2.5 text-center text-[14px] font-semibold text-on-ink">

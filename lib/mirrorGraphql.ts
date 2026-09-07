@@ -3,8 +3,9 @@ import {
   findBySku,
   findByUrlKey,
   magentoItem,
-  MIRROR_PRODUCTS,
-  MIRROR_SALE_CATEGORY,
+  matchMirrorCategories,
+  MIRROR_NAV,
+  productsByCategoryId,
   searchMirror,
 } from "./mirrorCatalog";
 
@@ -17,15 +18,6 @@ function localeFor(store: StoreCode) {
   return STORE_MAP[store].language === "ar" ? "ar_SA" : "en_US";
 }
 
-function saleCategory(store: StoreCode) {
-  const lang = STORE_MAP[store].language;
-  return { id: MIRROR_SALE_CATEGORY.id, name: MIRROR_SALE_CATEGORY[lang] };
-}
-
-function inSaleCategory(ids: string[]) {
-  return ids.map(String).includes(String(MIRROR_SALE_CATEGORY.id));
-}
-
 export function executeMirrorGraphql(storeHeader: string, body: GqlBody) {
   if (!isStoreCode(storeHeader)) {
     return { errors: [{ message: `Unknown store ${storeHeader}` }] };
@@ -34,6 +26,7 @@ export function executeMirrorGraphql(storeHeader: string, body: GqlBody) {
   const query = body.query ?? "";
   const variables = body.variables ?? {};
   const meta = STORE_MAP[store];
+  const lang = meta.language;
 
   if (query.includes("storeConfig")) {
     return {
@@ -48,13 +41,12 @@ export function executeMirrorGraphql(storeHeader: string, body: GqlBody) {
   }
 
   if (query.includes("categoryList")) {
-    const name = String(variables.name ?? "").toLowerCase();
-    const cat = saleCategory(store);
-    const hit =
-      !name ||
-      cat.name.toLowerCase().includes(name) ||
-      /sale|offer|deal|flash|عروض|خصم/.test(name);
-    return { data: { categoryList: hit ? [cat] : [] } };
+    const name = String(variables.name ?? "");
+    const hits = matchMirrorCategories(name).map((cat) => ({
+      id: cat.id,
+      name: lang === "ar" ? cat.magentoAr : cat.magentoEn,
+    }));
+    return { data: { categoryList: hits } };
   }
 
   if (/url_key/.test(query) && ("key" in variables || /url_key:\s*\{\s*eq/.test(query))) {
@@ -72,12 +64,7 @@ export function executeMirrorGraphql(storeHeader: string, body: GqlBody) {
   if (/category_id/.test(query)) {
     const ids = (variables.ids as string[] | undefined) ?? [];
     const pageSize = Number(variables.pageSize ?? 12);
-    const items = inSaleCategory(ids)
-      ? MIRROR_PRODUCTS.filter((p) => p.byWebsite[meta.website].stock === "IN_STOCK").map((p) =>
-          magentoItem(store, p),
-        )
-      : [];
-    return { data: { products: { items: items.slice(0, pageSize) } } };
+    return { data: { products: { items: productsByCategoryId(store, ids, pageSize) } } };
   }
 
   if (/products\(search/.test(query) || "search" in variables) {
@@ -88,3 +75,5 @@ export function executeMirrorGraphql(storeHeader: string, body: GqlBody) {
 
   return { errors: [{ message: "Unsupported mirror GraphQL query" }] };
 }
+
+export { MIRROR_NAV };

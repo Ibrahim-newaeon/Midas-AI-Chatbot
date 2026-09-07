@@ -1,22 +1,26 @@
 import { notFound } from "next/navigation";
 import { MirrorAddToCart } from "@/components/mirror-add-to-cart";
-import { findByUrlKey } from "@/lib/mirrorCatalog";
+import { MirrorDepartmentView } from "@/components/mirror-department-view";
+import { findByUrlKey, isMirrorNavSlug, MIRROR_NAV_SLUGS, MIRROR_PRODUCTS } from "@/lib/mirrorCatalog";
 import { CURRENCY_AR, isStoreCode, sessionFromStoreCode, STORE_CODES } from "@/lib/stores";
-import { MIRROR_PRODUCTS } from "@/lib/mirrorCatalog";
 
 export function generateStaticParams() {
-  return STORE_CODES.flatMap((store) =>
-    MIRROR_PRODUCTS.map((product) => ({ store, slug: product.url_key })),
-  );
+  return STORE_CODES.flatMap((store) => [
+    ...MIRROR_NAV_SLUGS.map((slug) => ({ store, slug })),
+    ...MIRROR_PRODUCTS.map((product) => ({ store, slug: product.url_key })),
+  ]);
 }
 
-export default async function MirrorPdp({
+export default async function MirrorSlugPage({
   params,
 }: {
   params: Promise<{ store: string; slug: string }>;
 }) {
   const { store, slug } = await params;
   if (!isStoreCode(store)) notFound();
+  if (isMirrorNavSlug(slug)) {
+    return <MirrorDepartmentView store={store} slug={slug} />;
+  }
   const product = findByUrlKey(slug);
   if (!product) notFound();
   const session = sessionFromStoreCode(store, { catalog: "mirror", page_sku: product.sku });
