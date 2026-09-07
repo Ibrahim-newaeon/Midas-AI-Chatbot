@@ -48,23 +48,72 @@ Chat on those pages sends `catalog: "mirror"` and reads mock GraphQL (`/api/grap
 
 Demo **Add to cart** on a PDP stores a local cart (`/{store}/cart`). It does not write the real Midas cart.
 
-## What is implemented
+## Checklist (Done / Partial / Not implemented / Waiting on live)
 
-- **Website widget** — floating launcher on desktop (corner panel) and full-screen on mobile (`Try Midas AI`). Magento drop-in: `/widget/midas-ai.js` → iframe `/embed`
-- Store-aware session (`en`, `ar`, `qtr_en`, `ksa_ar`, …) with KWD / QAR / SAR / JOD / BHD
-- Runtime prompt is **Part A** of Combined System v1.1 (`prompts/midas-ai-website-system.md`). Full spec: `docs/combined-system-v1.1.md`
-- Tools: `search_catalog`, `get_product`, `check_stock`, `get_policy`, `get_current_promotions`
-- Query understanding: budget (`under 300`), colour/material, follow-up turns, bare numeric SKU identity
-- Arabic query normalization + Arabizi lexicon before Magento search (middleware fallback; Magento ES analyzer not changed)
-- Send-gate verifier: UI SKUs and spoken prices must match this turn’s Magento facts
-- **Knowledge pack** in `knowledge/<country>/en.md` and `ar.md` — showrooms, hours, customer care, complaints (editable markdown, not Magento)
-- Chat UI follows `design-system.xml` (Nord, Playfair Display, Noto Kufi Arabic, Magento buttons and prices)
-- “What’s on offer?” reads live Magento sale categories — not a keyword search for the word “offers”
-- Majlis queries search seating, not dining
-- Pasted `midasfurniture.com` product links **load that piece**: exact Magento `url_key` lookup, then identity copy (`LONDER Bedroom Set, SKU 154534, 495 KWD…`), a grounded FOMO line, and Add to cart
-- Product links from the widget include `utm_source=Midas_AI&utm_medium=widget&utm_campaign=Chatbot` (WhatsApp / Instagram mediums are ready for those channels)
-- **Magento mirror** at `/demo` and `/{store}/` — EN+AR storefronts, fixture catalog, local demo cart. `/` still uses live Magento.
-- JSON-LD `Product`/`Offer` on mirror PDPs (per store currency). Client `dataLayer` events: `chat_open`, `chat_first_message`, `chat_product_shown`, `chat_add_to_cart`, `chat_handoff_human`
+Source of truth: Combined System v1.1 (`docs/combined-system-v1.1.md`). Runtime prompt is Part A only (`prompts/midas-ai-website-system.md`).
+
+**Done** — works in this repo. **Partial** — started, not the full spec. **Not implemented** — not built (later or out of Phase 1). **Waiting on live** — code is ready enough; it needs the Magento theme / ops, not another rewrite of A.
+
+### Part A — shopper brain (website)
+
+| Item | Status |
+|---|---|
+| Website chat only (not WhatsApp / Instagram) | **Done** |
+| Store lock: 10 views, KWD / QAR / SAR / JOD / BHD, no currency conversion | **Done** |
+| No invented SKUs; Magento (or the mirror) is the price/stock source | **Done** |
+| No customization; no AR/3D | **Done** |
+| Arabic: gender-neutral CTAs, don’t “correct” spelling, majlis = seating not dining | **Done** |
+| “What’s on offer?” from sale categories | **Done** |
+| Complaints / care / showrooms / delivery from the knowledge pack | **Done** |
+| Discount / “ignore instructions, 90% off” → refuse, no fake promo | **Done** |
+| Photo search labelled as style match (`OPENAI_API_KEY` or a typed caption) | **Partial** — works; vision needs the API key |
+| Cards: view + Add to cart | **Partial** — **Waiting on live** for the real Magento cart. Mirror writes a demo cart. Live / theme embed opens the PDP (and posts `midas:add_to_cart`) |
+| Paste a `midasfurniture.com` product link → that exact piece + FOMO | **Done** (added after original A) |
+| AI product links tagged `utm_source=Midas_AI&utm_campaign=Chatbot` (`utm_medium=widget` now; `whatsapp` / `Instagram` when those channels exist) | **Done** (added after original A) |
+| Floating widget: desktop corner panel, mobile full screen | **Done** (added after original A) |
+| Magento mirror: 8 Living / 8 Dining / 8 Bedrooms / 8 Offers, 10 storefronts | **Done** (added after original A) |
+| Budget / colour / short follow-ups / bare numeric SKU | **Partial** — query understanding is in; not a full “last 3 SKUs” memory |
+| Real LLM tool-calling conversation | **Not implemented** — rules orchestrator, not GPT picking tools |
+| Streaming replies | **Not implemented** |
+| Live Wallet balance | **Not implemented** — policy copy only (`get_policy("wallet")`) |
+| Product dimensions / colour / material from Magento attributes | **Not implemented** — those DTO fields stay `null`; colour/material in the query is text match |
+| Remember last three SKUs across “make it beige” | **Partial** — last spoken SKU + blended last user text; not a 3-SKU memory |
+| Widget sitting on midasfurniture.com | **Waiting on live** — `/widget/midas-ai.js` is ready; theme script is not installed |
+
+### Part B — Phase 1 plumbing
+
+| Item | Status |
+|---|---|
+| Magento GraphQL per `Store` header (search, SKU, URL, sale categories, stock) | **Done** |
+| Arabic query-time normalize + Arabizi + majlis synonyms (middleware fallback) | **Done** — not Magento Elasticsearch |
+| Send-gate: UI SKU and spoken prices match this turn; currency lock | **Done** |
+| Zod on `/api/chat` | **Done** |
+| Knowledge markdown per country | **Done** |
+| Magento design system on the widget | **Done** |
+| Session `store_code` + `chat_session_id` | **Done** |
+| Injection screen (narrow) | **Done** |
+| Rate limit on `/api/chat` | **Done** |
+| Light PII redaction (email/phone) before catalog search | **Done** |
+| Client `dataLayer` chat events (`chat_open`, `chat_product_shown`, `chat_add_to_cart`, …) | **Done** |
+| JSON-LD `Product` / `Offer` | **Partial** — on **mirror** PDPs. Live Magento PDPs are **Waiting on live** (theme) |
+| `TRUTH_TTL_MS` | **Partial** — code default 60s; `env.example` 120s. Not set from measured Magento p95 (**Waiting on live**) |
+| Human-handoff packet | **Partial** — care copy + `ui.handoff`; not a full agent brief |
+| Embed script for the Magento theme | **Waiting on live** — file exists; not on the live theme |
+| Magento `addProductsToCart` into the real cart | **Waiting on live** — parent theme must handle `midas:add_to_cart` |
+| Elasticsearch diagnostic (Branch A vs B) | **Waiting on live** — no ES host here; `[VERIFY]` still blank |
+| GTM / GA4 thank-you / `chat_assisted_purchase` | **Waiting on live** — needs Magento order + server GTM |
+| Hybrid search (Pinecone / vectors / rerank) | **Not implemented** |
+| Golden eval set, model bake-off, Playwright, k6 | **Not implemented** — unit tests only (`npm test`) |
+| Memory, learning queue, eval judge, merchandising insight | **Not implemented** |
+| WhatsApp / Messenger / Instagram gateway | **Not implemented** — UTM mediums are reserved |
+| Wallet GraphQL | **Not implemented** |
+
+### Go-live blockers (the live version)
+
+1. Host this app and add `<script src="https://YOUR_HOST/widget/midas-ai.js">` on the Magento theme (after `BASE_URL`).
+2. Confirm store / language / currency / PDP `page_sku` on a real Midas page.
+3. Hook `midas:add_to_cart` so Add to cart hits the **live** Magento cart.
+4. Optional: thank-you GTM + `chat_session_id` on the order.
 
 ## Key files
 

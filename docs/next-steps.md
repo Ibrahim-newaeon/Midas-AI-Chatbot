@@ -2,30 +2,23 @@
 
 Source of truth: **Combined System v1.1** (`docs/combined-system-v1.1.md`). Website only until prices stay grounded.
 
-## Already done (this slice)
+The live checklist (**Done / Partial / Not implemented / Waiting on live**) lives in the [README](../README.md#checklist-done--partial--not-implemented--waiting-on-live). Keep that table in sync when we ship extras (paste-a-link, UTM, widget, mirror catalog).
 
-- Part A runtime prompt + rules orchestrator
-- Magento GraphQL tools + knowledge markdown
-- Arabic normalization / Arabizi / majlis synonyms at query time (Branch B middleware fallback)
-- Query understanding: budget, colour/material, follow-up, bare SKU
-- Send-gate verifier on `/api/chat` (rate limit + Zod)
-- Design system + live sale categories / `get_current_promotions`
-- Desktop + mobile website widget (launcher / full-screen) + Magento `midas-ai.js` embed
-- JSON-LD on mirror PDPs; client dataLayer chat events
-- Magento mirror catalog (8 products per department)
+## Go-live (the live version)
 
-## Blocked on Magento / ops (`[VERIFY]` in B1)
+1. Host this app and add `<script src="https://YOUR_HOST/widget/midas-ai.js">` on the Magento theme (after `BASE_URL`).
+2. Confirm store / language / currency / PDP `page_sku` on a real Midas page.
+3. Hook `midas:add_to_cart` so Add to cart hits the **live** Magento cart.
+4. Optional: thank-you GTM + `chat_session_id` on the order.
+5. Elasticsearch analyzer diagnostic (B2.1) when an ES host exists; until then Branch B middleware stays.
+6. Set `TRUTH_TTL_MS` from measured Magento p95 (rehearsal default `120000` in `env.example`).
 
-- Elasticsearch analyzer diagnostic (B2.1) — no ES host here; middleware normalization is the fallback (Branch B)
-- `TRUTH_TTL_MS` from measured MSI p95 — rehearsal default `120000` in `env.example`
-- Human hours / WhatsApp numbers per remaining countries (Bahrain locator unpublished)
-- Server-side GTM / thank-you `chat_assisted_purchase` (needs Magento order attribute)
-- Live Magento `addProductsToCart` cookies (parent theme must handle `midas:add_to_cart`)
-
-## Not this slice (still later)
+## Later (not Phase 1)
 
 - Pinecone / hybrid vector retrieval, SSE token streaming, WhatsApp/Meta, Phase 9 memory
 - 3D / AR, Wallet live balance, seven-mode search experience, a live multi-agent tree
+- Golden eval set, model bake-off, Playwright, k6
+- JSON-LD on live Magento PDPs (mirror PDPs already have it)
 
 ## Owner split
 
