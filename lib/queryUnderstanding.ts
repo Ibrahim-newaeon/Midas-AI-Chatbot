@@ -39,6 +39,14 @@ const MATERIALS: Array<[RegExp, string]> = [
   [/fabric|قماش/i, "fabric"],
 ];
 
+const FILLER_RE = /\b(make it|make them|please|instead|rather)\b|خليه|خليها/gi;
+const SOFA_RE = /sofa|sectional|loveseat|recliner|كنب|أريكة|اريكة|اريكه/i;
+const TABLE_RE = /coffee table|centre table|center table|dining table|طاولة|طعام|سفرة/i;
+
+export function isSofaIntent(text: string) {
+  return SOFA_RE.test(text) && !TABLE_RE.test(text);
+}
+
 function lastUserTexts(messages: ChatMessage[]) {
   return messages.filter((m) => m.role === "user").map((m) => m.content.trim()).filter(Boolean);
 }
@@ -107,7 +115,7 @@ export function extractConstraints(messages: ChatMessage[]): QueryConstraints {
       ? "dining"
       : /bedroom|نوم|سرير/i.test(hay)
         ? "bedroom"
-        : /living|معيشة|صالة/i.test(hay)
+        : /living|معيشة|صالة/i.test(hay) || isSofaIntent(hay)
           ? "living"
           : null;
 
@@ -123,7 +131,7 @@ export function extractConstraints(messages: ChatMessage[]): QueryConstraints {
   const colorOnlyFollowUp = followUp && lastColor && !lastMaterial;
   const materialOnlyFollowUp = followUp && lastMaterial && !lastColor;
 
-  const query = hay
+  let query = hay
     .replace(/https?:\/\/\S+/gi, " ")
     .replace(/i saw this in kuwait[^.?!]*/i, " ")
     .replace(BUDGET_RE, " ")
@@ -131,8 +139,15 @@ export function extractConstraints(messages: ChatMessage[]): QueryConstraints {
     .replace(/same price\??/i, " ")
     .replace(/do you have (something like this|a|an)?/i, " ")
     .replace(/هل عندكم شي يناسب/g, "مجلس")
-    .replace(/\s+/g, " ")
-    .trim();
+    .replace(FILLER_RE, " ");
+  if (colorOnlyFollowUp) {
+    for (const [re] of COLORS) query = query.replace(re, " ");
+  }
+  if (materialOnlyFollowUp) {
+    for (const [re] of MATERIALS) query = query.replace(re, " ");
+  }
+  query = query.replace(/\s+/g, " ").trim();
+  if (!query) query = prior || last;
 
   return {
     query,

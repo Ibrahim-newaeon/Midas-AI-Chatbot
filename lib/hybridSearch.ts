@@ -109,12 +109,17 @@ function rerankScore(
   boostSkus: string[],
 ): number {
   const majlis = isSeatingIntent(query) || /majlis|majles|diwaniya|مجلس|ديوان/i.test(query) || room === "majlis";
+  const sofa = /sofa|sectional|كنب|أريكة|اريكة|اريكه/i.test(query) && !/table|طاولة/i.test(query);
   let score = rrf * 20;
   if (doc.inStock !== false) score += 0.4;
   if (boostSkus.includes(sku)) score += 2.5;
   if (majlis) {
     if (DINING_RE.test(doc.text)) score -= 8;
     if (SEATING_RE.test(doc.text)) score += 1.5;
+  }
+  if (sofa) {
+    if (/coffee|centre table|center table|dining|طعام|سفرة/i.test(doc.text)) score -= 7;
+    if (/sofa|sectional|recliner|loveseat|كنب|أريكة/i.test(doc.text)) score += 2.2;
   }
   const qTokens = lexicalTokens(query);
   const hay = lexicalTokens(doc.text);

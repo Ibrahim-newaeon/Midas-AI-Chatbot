@@ -16,6 +16,7 @@ import {
   toProductDto,
 } from "@/lib/magento";
 import { isStoreCode, type StoreCode } from "@/lib/stores";
+import { isSofaIntent } from "@/lib/queryUnderstanding";
 import type { ProductDto, SearchCatalogInput, ToolErr, ToolOk } from "@/lib/types";
 
 function badStore(store_code: string): ToolErr {
@@ -59,8 +60,20 @@ export async function searchCatalog(
   if (!isStoreCode(input.store_code)) return badStore(input.store_code);
   const store = sessionFor(input.store_code);
   const pageSize = Math.min(Math.max(input.page_size ?? 6, 1), 12);
-  const queries = [...new Set(buildSearchText(input))].slice(0, 3);
-  const search = queries.join(" ");
+  const sofaIntent = isSofaIntent([input.query, input.room].filter(Boolean).join(" "));
+  const baseText = {
+    query: input.query,
+    brand: input.brand,
+    color: sofaIntent ? null : input.color,
+    material: sofaIntent ? null : input.material,
+    room: input.room,
+    category: input.category,
+  };
+  const queries = [...new Set(buildSearchText(baseText))].slice(0, 3);
+  if (sofaIntent && input.color) {
+    queries.unshift(`${input.color} sofa`);
+  }
+  const search = [input.query, ...queries].filter(Boolean).join(" ");
   try {
     const majlis = isMajlisQuery(input.query, input.room);
     const pineconeHits = await queryPinecone(input.store_code, search, 40);
@@ -107,7 +120,6 @@ export async function searchCatalog(
       }
     }
     let products = await Promise.all(raw.map((p) => toProductDto(store, p)));
-    products = applyHybrid(products, search, input.room, input.boost_skus);
     if (input.in_stock_only !== false) {
       products = products.filter((p) => p.stock_status === "IN_STOCK");
     }
@@ -133,6 +145,15 @@ export async function searchCatalog(
       const seating = products.filter((p) => !/dining|طعام|سفرة/i.test([p.name, ...p.categories].join(" ")));
       if (seating.length) products = seating;
     }
+    if (sofaIntent) {
+      const sofas = products.filter((p) => {
+        const hay = [p.name, ...p.categories].join(" ");
+        if (/coffee|centre table|center table|dining table|طعام|سفرة/i.test(hay)) return false;
+        return /sofa|sectional|loveseat|recliner|كنب|أريكة|اريكة/i.test(hay);
+      });
+      if (sofas.length) products = sofas;
+    }
+    products = applyHybrid(products, search, input.room, input.boost_skus);
     return {
       ok: true,
       store_code: input.store_code,

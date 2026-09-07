@@ -374,7 +374,10 @@ export async function runRulesOrchestrator(input: {
 
   const kwdTrap = /kwd|د\.ك|kuwait price|سعر الكويت/i.test(last) && session.website !== "kuwait";
   used.push("search_catalog");
-  const query = constraints.query || last || visionQuery || "furniture";
+  let query = constraints.query || last || visionQuery || "furniture";
+  if (constraints.followUp && profile?.lastQuery && !query.toLowerCase().includes(profile.lastQuery.toLowerCase().slice(0, 24))) {
+    query = `${profile.lastQuery} ${query}`.replace(/\s+/g, " ").trim();
+  }
 
   let keptFromMemory: ProductDto[] = [];
   if ((constraints.followUp || constraints.color || constraints.material) && rememberedSkus.length) {
@@ -455,8 +458,8 @@ export async function runRulesOrchestrator(input: {
   const first = merged[0];
   const message =
     lang === "ar"
-      ? `${trap}${majlisNote}هذه قطع متوفرة في ${country}.${budgetNote} مثال: ${first.name} بسعر ${money(first, "ar")}. هل تفضّل أن أضيّق البحث حسب المقاس أو اللون؟`
-      : `${trap}${majlisNote}In-stock in ${country}.${budgetNote} One option is ${first.name} at ${money(first, "en")}. Shall I narrow by size or colour?`;
+      ? `${trap}${majlisNote}هذه قطع متوفرة في ${country}.${budgetNote} مثال: ${first.name}، رقم ${first.sku}، بسعر ${money(first, "ar")}. هل تفضّل أن أضيّق البحث حسب المقاس أو اللون؟`
+      : `${trap}${majlisNote}In-stock in ${country}.${budgetNote} One option is ${first.name}, SKU ${first.sku}, at ${money(first, "en")}. Shall I narrow by size or colour?`;
 
   await stampMemory(session, merged, constraints);
   return { message, ui: cards(merged, ["view"], lang), used_tools: used, engine: "rules" };

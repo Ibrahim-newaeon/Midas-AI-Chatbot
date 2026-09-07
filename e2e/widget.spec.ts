@@ -59,3 +59,16 @@ test("Arabic majlis cards are seating, not dining", async ({ request }) => {
     expect(p.currency).toBe("KWD");
   }
 });
+
+test("make it beige keeps the sofa, not a coffee table", async ({ page }) => {
+  await page.goto("/en/");
+  await page.getByTestId("midas-ai-launcher").click();
+  await page.getByTestId("chat-input").fill("velvet sofa");
+  await page.getByTestId("chat-send").click();
+  await expect(page.getByTestId("product-sku").first()).toBeVisible({ timeout: 20_000 });
+  await page.getByTestId("chat-input").fill("make it beige");
+  await page.getByTestId("chat-send").click();
+  const card = page.getByTestId("product-card-161621");
+  await expect(card).toBeVisible({ timeout: 20_000 });
+  await expect(card.getByTestId("product-sku")).toHaveText(/SKU 161621/);
+});

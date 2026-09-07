@@ -245,7 +245,9 @@ test("colour-only follow-up drops prior material and keeps last three SKUs", () 
   assert.equal(follow.color, "beige");
   assert.equal(follow.material, null);
   assert.equal(follow.followUp, true);
+  assert.equal(follow.room, "living");
   assert.match(follow.query, /velvet sofa/i);
+  assert.doesNotMatch(follow.query, /beige/i);
 });
 
 test("PII is redacted before catalog search text", () => {

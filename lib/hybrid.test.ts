@@ -17,6 +17,18 @@ test("hashed embeddings are cosine-similar for near-duplicate copy", () => {
   assert.ok(cosine(a, b) > cosine(a, c));
 });
 
+test("sofa colour follow-up ranks a beige sofa above a coffee table", () => {
+  const table = { sku: "170401", text: "KASURU WOODEN COFFEE TABLE SET BEIGE living centre", inStock: true };
+  const skus = hybridRank({
+    query: "velvet sofa",
+    docs: [sofa, beige, table],
+    room: "living",
+    limit: 3,
+  });
+  assert.ok(skus[0] === "161621" || skus[0] === "170423");
+  assert.notEqual(skus[0], "170401");
+});
+
 test("hybrid rank keeps majlis seating above dining tables", () => {
   const skus = hybridRank({
     query: "bagi kanaba lel majles",
