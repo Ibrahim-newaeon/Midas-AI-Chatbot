@@ -8,7 +8,12 @@
     "start": "next start -p 43217 -H 0.0.0.0",
     "preview": "next build && next start -p 43217 -H 0.0.0.0",
     "lint": "eslint",
-    "test": "node --experimental-strip-types --test lib/v11.test.ts"
+    "test": "tsx --test lib/*.test.ts",
+    "eval": "tsx eval/run-eval.ts",
+    "bakeoff": "tsx eval/bakeoff.ts",
+    "test:e2e": "playwright test",
+    "load:smoke": "tsx eval/load-smoke.ts",
+    "k6": "k6 run k6/chat.js"
   },
   "dependencies": {
     "@base-ui/react": "^1.8.0",
@@ -30,6 +35,8 @@
     "eslint": "^9",
     "eslint-config-next": "16.3.4",
     "tailwindcss": "^4",
-    "typescript": "^5"
+    "typescript": "^5",
+    "tsx": "^4.20.5",
+    "@playwright/test": "^1.55.0"
   }
 }

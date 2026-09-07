@@ -31,7 +31,11 @@ export default function DemoHub() {
         })}
       </ul>
       <p className="text-[13px] text-text-muted">
-        Ten storefronts (5 countries × English/Arabic). Each home lists eight products per department.
+        Ten storefronts (5 countries × English/Arabic). Each home lists eight products per department.{" "}
+        <a className="underline" href="/insights">
+          Asked-but-not-stocked insight
+        </a>
+        .
       </p>
     </div>
   );

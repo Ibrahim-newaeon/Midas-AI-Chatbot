@@ -24,6 +24,17 @@ npm start
 
 No API key is required for text search. Magento is called from this Next.js server, not from the browser.
 
+Quality commands (mirror catalog, no live Magento needed):
+
+```bash
+npm test              # unit tests
+npm run eval          # golden set vs the rules orchestrator
+npm run bakeoff       # score the current candidate (rules until an LLM stays green)
+npm run test:e2e      # Playwright (starts or reuses :43217)
+npm run load:smoke    # Node p95 smoke against /api/chat (needs the dev server)
+# k6 run k6/chat.js   # optional; install k6 separately
+```
+
 Optional `env.example` values:
 
 - `MAGENTO_GRAPHQL_URL` — defaults to `https://midasfurniture.com/graphql` (used by the assistant on `/`)
@@ -72,12 +83,12 @@ Source of truth: Combined System v1.1 (`docs/combined-system-v1.1.md`). Runtime 
 | AI product links tagged `utm_source=Midas_AI&utm_campaign=Chatbot` (`utm_medium=widget` now; `whatsapp` / `Instagram` when those channels exist) | **Done** (added after original A) |
 | Floating widget: desktop corner panel, mobile full screen | **Done** (added after original A) |
 | Magento mirror: 8 Living / 8 Dining / 8 Bedrooms / 8 Offers, 10 storefronts | **Done** (added after original A) |
-| Budget / colour / short follow-ups / bare numeric SKU | **Partial** — query understanding is in; not a full “last 3 SKUs” memory |
+| Budget / colour / short follow-ups / bare numeric SKU | **Done** |
 | Real LLM tool-calling conversation | **Not implemented** — rules orchestrator, not GPT picking tools |
 | Streaming replies | **Not implemented** |
 | Live Wallet balance | **Not implemented** — policy copy only (`get_policy("wallet")`) |
 | Product dimensions / colour / material from Magento attributes | **Not implemented** — those DTO fields stay `null`; colour/material in the query is text match |
-| Remember last three SKUs across “make it beige” | **Partial** — last spoken SKU + blended last user text; not a 3-SKU memory |
+| Remember last three SKUs across “make it beige” | **Done** — stated-preference memory + last three spoken SKUs, re-fetched from Magento this turn |
 | Widget sitting on midasfurniture.com | **Waiting on live** — `/widget/midas-ai.js` is ready; theme script is not installed |
 
 ### Part B — Phase 1 plumbing
@@ -102,9 +113,9 @@ Source of truth: Combined System v1.1 (`docs/combined-system-v1.1.md`). Runtime 
 | Magento `addProductsToCart` into the real cart | **Waiting on live** — parent theme must handle `midas:add_to_cart` |
 | Elasticsearch diagnostic (Branch A vs B) | **Waiting on live** — no ES host here; `[VERIFY]` still blank |
 | GTM / GA4 thank-you / `chat_assisted_purchase` | **Waiting on live** — needs Magento order + server GTM |
-| Hybrid search (Pinecone / vectors / rerank) | **Not implemented** |
-| Golden eval set, model bake-off, Playwright, k6 | **Not implemented** — unit tests only (`npm test`) |
-| Memory, learning queue, eval judge, merchandising insight | **Not implemented** |
+| Hybrid search (Pinecone / vectors / rerank) | **Done** locally (BM25 + hashed vectors + rerank). **Waiting on live** for a Pinecone index (`PINECONE_API_KEY` + `PINECONE_INDEX_HOST`). Vectors never store price/stock |
+| Golden eval set, model bake-off, Playwright, k6 | **Done** as a harness (`npm run eval`, `npm run bakeoff`, `npm run test:e2e`, `k6/chat.js`). Golden set is bilingual rehearsal cases, not 150–300 live transcripts yet |
+| Memory, learning queue, eval judge, merchandising insight | **Done** — stated prefs + last 3 SKUs; unanswered clusters; deterministic judge; `/insights`. Nothing auto-writes the knowledge pack |
 | WhatsApp / Messenger / Instagram gateway | **Not implemented** — UTM mediums are reserved |
 | Wallet GraphQL | **Not implemented** |
 
@@ -130,6 +141,14 @@ Source of truth: Combined System v1.1 (`docs/combined-system-v1.1.md`). Runtime 
 | `components/chat-widget.tsx` | Chat panel |
 | `public/widget/midas-ai.js` | Magento script tag (iframe `/embed`) |
 | `widget/resolve-session.js` | Session helper (also inlined in `midas-ai.js`) |
+| `lib/hybridSearch.ts` | BM25 + vector + rerank (SKU ids only) |
+| `lib/pinecone.ts` | Optional Pinecone recall; no-op without keys |
+| `lib/memory.ts` | Stated-preference memory (last 3 SKUs) |
+| `lib/learningQueue.ts` | Unanswered clusters → merchandising insight |
+| `lib/evalJudge.ts` | Deterministic golden-set judge |
+| `eval/golden.json` | Rehearsal eval cases |
+| `e2e/widget.spec.ts` | Playwright |
+| `k6/chat.js` | Load script for `/api/chat` |
 | `docs/middleware-api.md` | Tool contracts |
 | `docs/session-injection.md` | Magento URL / cookie session |
 

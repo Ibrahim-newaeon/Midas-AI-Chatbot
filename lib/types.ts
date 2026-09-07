@@ -38,6 +38,7 @@ export type SearchCatalogInput = {
   max_price?: number | null;
   in_stock_only?: boolean;
   page_size?: number;
+  boost_skus?: string[];
 };
 
 export type UiPayload = {

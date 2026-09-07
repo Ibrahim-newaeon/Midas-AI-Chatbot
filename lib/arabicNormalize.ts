@@ -30,7 +30,7 @@ const ARABIZI_LEXICON: Array<[RegExp, string]> = [
   [/\bmaktab\b/gi, "مكتب"],
 ];
 
-const SEATING_SYNONYMS = /مجلس|مجالس|ديوانية|ديوانيه|صالة جلوس|غرفة جلوس|ستنغ|majlis|majles|diwaniya|dawaniya/i;
+const SEATING_SYNONYMS = /مجلس|مجالس|ديوانية|ديوانيه|صالة جلوس|غرفة جلوس|ستنغ|أريكة|اريكة|اريكه|كنبة|كنب|sofa|sectional|majlis|majles|diwaniya|dawaniya/i;
 const DINING_SYNONYMS = /سفرة|سفره|غرفة طعام|غرفة سفرة|طاولة طعام|dining/i;
 
 export function normalizeArabic(input: string): string {

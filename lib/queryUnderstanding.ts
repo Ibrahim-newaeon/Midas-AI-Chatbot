@@ -57,12 +57,22 @@ export function parseBudget(text: string): number | null {
   return null;
 }
 
-export function lastSpokenSku(messages: ChatMessage[]): string | null {
+export function lastSpokenSkus(messages: ChatMessage[], limit = 3): string[] {
+  const skus: string[] = [];
   for (const m of [...messages].reverse()) {
-    const hit = m.content.match(/SKU\s+(\d{4,8})/i) || m.content.match(/رقم\s+(\d{4,8})/i);
-    if (hit) return hit[1];
+    const re = /SKU\s+(\d{4,8})|رقم\s+(\d{4,8})/gi;
+    let hit: RegExpExecArray | null;
+    while ((hit = re.exec(m.content))) {
+      const sku = hit[1] || hit[2];
+      if (sku && !skus.includes(sku)) skus.push(sku);
+      if (skus.length >= limit) return skus;
+    }
   }
-  return null;
+  return skus;
+}
+
+export function lastSpokenSku(messages: ChatMessage[]): string | null {
+  return lastSpokenSkus(messages, 1)[0] ?? null;
 }
 
 export function extractConstraints(messages: ChatMessage[]): QueryConstraints {
@@ -108,6 +118,11 @@ export function extractConstraints(messages: ChatMessage[]): QueryConstraints {
     (addToCart ? lastSpokenSku(messages) : null) ??
     (/sku|stock|متوفر|سعر|price/i.test(last) ? (last.match(SKU_ANY)?.[1] ?? null) : null);
 
+  const lastColor = COLORS.some(([re]) => re.test(last));
+  const lastMaterial = MATERIALS.some(([re]) => re.test(last));
+  const colorOnlyFollowUp = followUp && lastColor && !lastMaterial;
+  const materialOnlyFollowUp = followUp && lastMaterial && !lastColor;
+
   const query = hay
     .replace(/https?:\/\/\S+/gi, " ")
     .replace(/i saw this in kuwait[^.?!]*/i, " ")
@@ -122,8 +137,8 @@ export function extractConstraints(messages: ChatMessage[]): QueryConstraints {
   return {
     query,
     max_price,
-    color,
-    material,
+    color: colorOnlyFollowUp ? color : materialOnlyFollowUp ? null : color,
+    material: colorOnlyFollowUp ? null : material,
     room,
     brand,
     sku,
@@ -132,7 +147,11 @@ export function extractConstraints(messages: ChatMessage[]): QueryConstraints {
   };
 }
 
-export function toSearchInput(store_code: SearchCatalogInput["store_code"], c: QueryConstraints): SearchCatalogInput {
+export function toSearchInput(
+  store_code: SearchCatalogInput["store_code"],
+  c: QueryConstraints,
+  extras?: { boost_skus?: string[] },
+): SearchCatalogInput {
   return {
     store_code,
     query: c.query || "furniture",
@@ -143,5 +162,6 @@ export function toSearchInput(store_code: SearchCatalogInput["store_code"], c: Q
     max_price: c.max_price,
     in_stock_only: true,
     page_size: 8,
+    boost_skus: extras?.boost_skus,
   };
 }

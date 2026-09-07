@@ -487,6 +487,7 @@ export function ChatWidget({
             placeholder={ar ? "اسأل عن غرفة، مقاس، أو أرفق صورة…" : "Ask about a room, size, or attach a photo…"}
             className="midas-input min-h-14 max-h-32 flex-1 resize-none py-3 text-[16px]"
             rows={1}
+            data-testid="chat-input"
             onKeyDown={(e) => {
               if (e.key === "Enter" && !e.shiftKey) {
                 e.preventDefault();

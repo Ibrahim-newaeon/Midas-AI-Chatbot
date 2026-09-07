@@ -1,8 +1,10 @@
 import { readFile } from "fs/promises";
 import path from "path";
+import { recordUnanswered } from "@/lib/learningQueue";
+import { recallProfile, rememberTurn } from "@/lib/memory";
 import { identityReply, pieceHeadline } from "@/lib/productCopy";
 import { parseMidasProductUrl } from "@/lib/productLink";
-import { extractConstraints, lastSpokenSku, redactPii, toSearchInput } from "@/lib/queryUnderstanding";
+import { extractConstraints, lastSpokenSkus, redactPii, toSearchInput } from "@/lib/queryUnderstanding";
 import { CURRENCY_AR, STORE_MAP, WEBSITE_NAME, type SessionContext } from "@/lib/stores";
 import { getCurrentPromotions, getPolicy, getProduct, getProductByUrlKey, searchCatalog, searchOnSale, visualSearch } from "@/lib/tools";
 import type { AssistantTurn, ChatMessage, ProductCta, ProductDto, UiPayload } from "@/lib/types";
@@ -69,6 +71,32 @@ function cards(products: ProductDto[], extra: ProductCta[] = ["view"], lang: "en
 
 function emptyUi(handoff = false, reason: string | null = null): UiPayload {
   return { products: [], ctas: handoff ? ["handoff"] : [], handoff: { show: handoff, reason } };
+}
+
+async function stampMemory(
+  session: SessionContext,
+  products: ProductDto[],
+  constraints: { query: string; color: string | null; material: string | null; room: string | null; max_price: number | null },
+) {
+  await rememberTurn({
+    chat_session_id: session.chat_session_id,
+    store_code: session.store_code,
+    skus: products.map((p) => p.sku),
+    query: constraints.query,
+    color: constraints.color,
+    material: constraints.material,
+    room: constraints.room,
+    budget: constraints.max_price,
+  });
+}
+
+async function unanswered(session: SessionContext, query: string, reason: "unanswered" | "empty_search" | "catalog_unavailable" | "out_of_catalog") {
+  await recordUnanswered({
+    store_code: session.store_code,
+    query,
+    reason,
+    chat_session_id: session.chat_session_id,
+  });
 }
 
 export async function loadSystemPrompt() {
@@ -173,6 +201,7 @@ export async function runRulesOrchestrator(input: {
           ? `الرابط من موقع ${urlCountry}. السعر أدناه من متجر ${country} بـ ${session.currency} وليس تحويلاً. `
           : `The link is from the ${urlCountry} website. The price below is the ${country} catalog in ${session.currency}, not a conversion. `
         : "";
+    await stampMemory(session, [p], constraints);
     return {
       message: identityReply({ product: p, country, lang, prefix: storeLock }),
       ui: cards([p], ["view"], lang),
@@ -231,6 +260,7 @@ export async function runRulesOrchestrator(input: {
     });
     used.push("search_catalog");
     const products = search.ok ? search.products : [];
+    await stampMemory(session, products, constraints);
     const message =
       lang === "ar"
         ? `${policy.ok ? policy.text : ""} هذه بدائل جاهزة متوفرة في ${country}.`
@@ -254,6 +284,7 @@ export async function runRulesOrchestrator(input: {
           ? promo.products
           : [];
     if (!products.length) {
+      await unanswered(session, last, "empty_search");
       return {
         message:
           lang === "ar"
@@ -271,6 +302,7 @@ export async function runRulesOrchestrator(input: {
       lang === "ar"
         ? `هذه أسعار خاصة حية في متجر ${country}.${campaign} مثال: ${first.name} بسعر ${money(first, "ar")}${off ? ` (خصم ${off})` : ""}.`
         : `Live special prices in ${country}.${campaign} Example: ${first.name} at ${money(first, "en")}${off ? ` (${off} off)` : ""}.`;
+    await stampMemory(session, products, constraints);
     return { message, ui: cards(products, ["view"], lang), used_tools: used, engine: "rules" };
   }
 
@@ -293,11 +325,14 @@ export async function runRulesOrchestrator(input: {
     }
   }
 
-  const sku = constraints.sku || session.page_sku || lastSpokenSku(input.messages);
+  const profile = await recallProfile(session.chat_session_id);
+  const rememberedSkus = [...new Set([...(profile?.lastSkus ?? []), ...lastSpokenSkus(input.messages)])].slice(0, 3);
+  const sku = constraints.sku || session.page_sku || rememberedSkus[0] || null;
   if (sku && (session.page_sku || constraints.sku || constraints.addToCart || /sku|stock|متوفر|سعر|price/i.test(last))) {
     used.push("get_product");
     const found = await getProduct(session.store_code, sku);
     if (!found.ok) {
+      await unanswered(session, last, "out_of_catalog");
       return {
         message:
           lang === "ar"
@@ -309,6 +344,7 @@ export async function runRulesOrchestrator(input: {
       };
     }
     const p = found.product;
+    await stampMemory(session, [p], constraints);
     return {
       message: identityReply({ product: p, country, lang }),
       ui: cards([p], ["view"], lang),
@@ -331,6 +367,7 @@ export async function runRulesOrchestrator(input: {
         lang === "ar"
           ? `هذه أقرب القطع المتوفرة في ${country} بناءً على الصورة${last ? " ووصفك" : ""}. ليست بالضرورة نفس قطعة بينترست.`
           : `Closest in-stock matches in ${country} from your photo${last ? " and note" : ""}. These are style matches, not a claim that we have the exact Pinterest SKU.`;
+      await stampMemory(session, vis.products, constraints);
       return { message, ui: cards(vis.products, ["view"], lang), used_tools: used, engine: "rules" };
     }
   }
@@ -338,12 +375,30 @@ export async function runRulesOrchestrator(input: {
   const kwdTrap = /kwd|د\.ك|kuwait price|سعر الكويت/i.test(last) && session.website !== "kuwait";
   used.push("search_catalog");
   const query = constraints.query || last || visionQuery || "furniture";
+
+  let keptFromMemory: ProductDto[] = [];
+  if ((constraints.followUp || constraints.color || constraints.material) && rememberedSkus.length) {
+    used.push("get_product");
+    const fetched = await Promise.all(rememberedSkus.map((sku) => getProduct(session.store_code, sku)));
+    keptFromMemory = fetched
+      .filter((f): f is Extract<typeof f, { ok: true }> => f.ok)
+      .map((f) => f.product)
+      .filter((p) => {
+        if (constraints.max_price != null && p.final_price > constraints.max_price) return false;
+        const hay = `${p.name} ${p.color ?? ""} ${p.material ?? ""} ${p.categories.join(" ")}`.toLowerCase();
+        if (constraints.color && !hay.includes(constraints.color.toLowerCase())) return false;
+        if (constraints.material && !hay.includes(constraints.material.toLowerCase())) return false;
+        return true;
+      });
+  }
+
   const result = await searchCatalog({
-    ...toSearchInput(session.store_code, { ...constraints, query }),
+    ...toSearchInput(session.store_code, { ...constraints, query }, { boost_skus: rememberedSkus }),
     page_size: 8,
   });
 
   if (!result.ok) {
+    await unanswered(session, last, "catalog_unavailable");
     return {
       message:
         lang === "ar"
@@ -355,7 +410,16 @@ export async function runRulesOrchestrator(input: {
     };
   }
 
-  if (!result.products.length) {
+  const merged: ProductDto[] = [];
+  const seenSku = new Set<string>();
+  for (const p of [...keptFromMemory, ...result.products]) {
+    if (seenSku.has(p.sku)) continue;
+    seenSku.add(p.sku);
+    merged.push(p);
+  }
+
+  if (!merged.length) {
+    await unanswered(session, last, "empty_search");
     return {
       message:
         lang === "ar"
@@ -388,13 +452,14 @@ export async function runRulesOrchestrator(input: {
         : ` within ${constraints.max_price} ${session.currency}.`
       : "";
 
-  const first = result.products[0];
+  const first = merged[0];
   const message =
     lang === "ar"
       ? `${trap}${majlisNote}هذه قطع متوفرة في ${country}.${budgetNote} مثال: ${first.name} بسعر ${money(first, "ar")}. هل تفضّل أن أضيّق البحث حسب المقاس أو اللون؟`
       : `${trap}${majlisNote}In-stock in ${country}.${budgetNote} One option is ${first.name} at ${money(first, "en")}. Shall I narrow by size or colour?`;
 
-  return { message, ui: cards(result.products, ["view"], lang), used_tools: used, engine: "rules" };
+  await stampMemory(session, merged, constraints);
+  return { message, ui: cards(merged, ["view"], lang), used_tools: used, engine: "rules" };
 }
 
 export async function runChat(input: {

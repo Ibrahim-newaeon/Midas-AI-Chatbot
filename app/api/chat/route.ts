@@ -4,6 +4,7 @@ import { sessionFromStoreCode } from "@/lib/stores";
 import { ChatRequestSchema } from "@/lib/schemas";
 import { safeRefusal, toTruth, verifySendGate } from "@/lib/verifier";
 import { runWithCatalog } from "@/lib/catalogContext";
+import { recordUnanswered } from "@/lib/learningQueue";
 import { rateLimit } from "@/lib/rateLimit";
 
 export const runtime = "nodejs";
@@ -77,6 +78,12 @@ export async function POST(req: Request) {
     const facts = (turn.ui.products ?? []).map((p) => toTruth(p, session.store_code));
     const gate = verifySendGate(turn, facts, session.store_code);
     if (!gate.ok) {
+      await recordUnanswered({
+        store_code: session.store_code,
+        query: messages.at(-1)?.content ?? "",
+        reason: "send_gate",
+        chat_session_id: session.chat_session_id,
+      });
       const refusal = safeRefusal(session.language);
       return NextResponse.json(
         {

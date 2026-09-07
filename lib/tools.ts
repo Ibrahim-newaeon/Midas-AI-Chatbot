@@ -1,4 +1,9 @@
+import { currentCatalog } from "@/lib/catalogContext";
+import { copyText, cosine, embedText } from "@/lib/embeddings";
+import { hybridRank, lexicalTokens } from "@/lib/hybridSearch";
+import { MIRROR_PRODUCTS } from "@/lib/mirrorCatalog";
 import { getPolicyText, POLICY_TOPICS, type PolicyTopic } from "@/lib/policies";
+import { queryPinecone } from "@/lib/pinecone";
 import {
   buildSearchText,
   getMagentoBySku,
@@ -25,28 +30,26 @@ function tokenize(text: string) {
     .filter((t) => t.length > 2 && !["the", "and", "for", "with", "this", "have", "something", "like", "هل", "عندكم"].includes(t));
 }
 
-function rankProducts(products: ProductDto[], search: string, room?: string | null) {
-  const tokens = tokenize(search);
-  const majlis = isMajlisQuery(search, room);
-  const scored = products.map((p) => {
-    const hay = `${p.name} ${p.brand ?? ""} ${p.categories.join(" ")}`.toLowerCase();
-    let score = 0;
-    for (const t of tokens) {
-      if (hay.includes(t)) score += 3;
-    }
-    if (/chair|كرسي/.test(search) && /chair|كرسي/.test(hay)) score += 8;
-    if (/sofa|sectional|كنب/.test(search) && /sofa|sectional|recliner|كنب/.test(hay)) score += 8;
-    if (/kare|كاري/.test(search) && /kare|كاري/.test(hay)) score += 6;
-    if (/ashley|آشلي|اشلي/.test(search) && /ashley|آشلي|اشلي/.test(hay)) score += 6;
-    if (majlis) {
-      if (/dining|طعام|سفرة/.test(hay)) score -= 12;
-      if (/sofa|sectional|recliner|loveseat|chair|coffee|centre|center|كنب|كرسي|وسط/.test(hay)) score += 6;
-    }
-    if (p.stock_status === "IN_STOCK") score += 1;
-    return { p, score };
+function dtoToCopy(p: ProductDto) {
+  return copyText([p.name, p.brand, p.color, p.material, ...p.categories]);
+}
+
+function applyHybrid(products: ProductDto[], search: string, room?: string | null, boostSkus?: string[]) {
+  if (!products.length) return products;
+  const ordered = hybridRank({
+    query: search,
+    docs: products.map((p) => ({
+      sku: p.sku,
+      text: dtoToCopy(p),
+      inStock: p.stock_status === "IN_STOCK",
+    })),
+    room,
+    boostSkus,
+    limit: Math.max(products.length, 10),
   });
-  scored.sort((a, b) => b.score - a.score);
-  return scored.filter((s) => s.score > 0 || tokens.length === 0).map((s) => s.p);
+  const bySku = new Map(products.map((p) => [p.sku, p]));
+  const ranked = ordered.map((sku) => bySku.get(sku)).filter((p): p is ProductDto => Boolean(p));
+  return ranked.length ? ranked : products;
 }
 
 
@@ -60,7 +63,8 @@ export async function searchCatalog(
   const search = queries.join(" ");
   try {
     const majlis = isMajlisQuery(input.query, input.room);
-    const batches = await Promise.all(queries.map((query) => searchMagento(store, query, 12)));
+    const pineconeHits = await queryPinecone(input.store_code, search, 40);
+    const batches = await Promise.all(queries.map((query) => searchMagento(store, query, 24)));
     const seen = new Set<string>();
     const raw = [];
     for (const batch of batches) {
@@ -71,7 +75,39 @@ export async function searchCatalog(
         }
       }
     }
+    for (const hit of pineconeHits) {
+      if (seen.has(hit.sku) || hit.store_code !== input.store_code) continue;
+      const extra = await getMagentoBySku(store, hit.sku);
+      if (extra) {
+        seen.add(extra.sku);
+        raw.push(extra);
+      }
+    }
+    if (currentCatalog() === "mirror") {
+      const docs = MIRROR_PRODUCTS.map((p) => ({
+        sku: p.sku,
+        text: copyText([p.name.en, p.name.ar, p.manufacturer, p.department, ...p.categories.en, ...p.categories.ar]),
+        inStock: p.byWebsite[store.website].stock === "IN_STOCK",
+      }));
+      const vectorSkus = hybridRank({ query: search, docs, room: input.room, boostSkus: input.boost_skus, limit: 16 });
+      const qv = embedText(search);
+      const qLex = new Set(lexicalTokens(search));
+      for (const sku of vectorSkus) {
+        if (seen.has(sku)) continue;
+        const doc = docs.find((d) => d.sku === sku);
+        if (!doc) continue;
+        const lexHit = lexicalTokens(doc.text).some((t) => qLex.has(t));
+        const vecHit = cosine(qv, embedText(doc.text)) >= 0.22;
+        if (!lexHit && !vecHit) continue;
+        const extra = await getMagentoBySku(store, sku);
+        if (extra) {
+          seen.add(extra.sku);
+          raw.push(extra);
+        }
+      }
+    }
     let products = await Promise.all(raw.map((p) => toProductDto(store, p)));
+    products = applyHybrid(products, search, input.room, input.boost_skus);
     if (input.in_stock_only !== false) {
       products = products.filter((p) => p.stock_status === "IN_STOCK");
     }
@@ -93,12 +129,10 @@ export async function searchCatalog(
       const matted = products.filter((p) => `${p.name} ${p.material ?? ""} ${p.categories.join(" ")}`.toLowerCase().includes(m));
       if (matted.length) products = matted;
     }
-    if (isMajlisQuery(input.query, input.room)) {
+    if (majlis) {
       const seating = products.filter((p) => !/dining|طعام|سفرة/i.test([p.name, ...p.categories].join(" ")));
       if (seating.length) products = seating;
     }
-    const ranked = rankProducts(products, search, input.room);
-    if (ranked.length) products = ranked;
     return {
       ok: true,
       store_code: input.store_code,

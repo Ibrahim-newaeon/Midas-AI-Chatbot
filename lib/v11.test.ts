@@ -236,6 +236,18 @@ test("bare numeric SKU is identity, follow-up keeps prior query and budget", () 
   assert.match(follow.query, /velvet sofa/i);
 });
 
+test("colour-only follow-up drops prior material and keeps last three SKUs", () => {
+  const follow = extractConstraints([
+    { role: "user", content: "velvet sofa" },
+    { role: "assistant", content: "OVALO, SKU 170423. CASAI, SKU 161621." },
+    { role: "user", content: "make it beige" },
+  ]);
+  assert.equal(follow.color, "beige");
+  assert.equal(follow.material, null);
+  assert.equal(follow.followUp, true);
+  assert.match(follow.query, /velvet sofa/i);
+});
+
 test("PII is redacted before catalog search text", () => {
   assert.match(redactPii("call me at +965 12345678 or a@b.com"), /\[phone\]/);
   assert.match(redactPii("call me at +965 12345678 or a@b.com"), /\[email\]/);

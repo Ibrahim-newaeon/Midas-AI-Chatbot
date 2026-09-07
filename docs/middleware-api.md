@@ -76,6 +76,8 @@ Live check already works: `storeConfig.store_code` + `default_display_currency_c
 
 `room: "majlis"` or `"diwaniya"` → Magento living/seating search text (sofa, chair, centre table). **Never** map majlis to dining.
 
+Retrieval is hybrid: Magento keyword hits plus optional Pinecone SKUs, fused with BM25 + local vectors, then reranked. Cards still use Magento `final_price` / `stock_status` from this turn.
+
 ### Magento query (shape)
 
 ```graphql
@@ -226,11 +228,11 @@ Until the pack is filled, `customization` can be this sentence for all stores (c
 }
 ```
 
-### Middleware steps (Phase 1, no Pinecone)
+### Middleware steps (visual search)
 
 1. Vision model → JSON attributes `{ category, colors, materials, style, room }` (map majlis → seating).
-2. Call the same search used by `search_catalog`.
-3. Return products plus `match_type`: `"style"` unless you later add embeddings.
+2. Call the same hybrid `search_catalog` path (lexical + vectors + rerank). Magento remains price/stock truth.
+3. Return products plus `match_type`: `"style"` unless you later add image embeddings.
 
 ```json
 {
@@ -272,4 +274,4 @@ GraphQL `Store` header on every Magento call = `session.store_code`. That is the
 
 ## Out of Phase 1 middleware
 
-`get_wallet_status`, `add_to_cart`, `get_current_promotions` as a separate CMS feed, Pinecone, AR/3D. Promotions for launch = `final_price` vs `regular_price` on the product DTO.
+`get_wallet_status`, Magento `addProductsToCart` cookies, `get_current_promotions` as a separate CMS feed, AR/3D. Promotions for launch = `final_price` vs `regular_price` on the product DTO. Pinecone is optional L4 recall — copy-only, store-scoped.

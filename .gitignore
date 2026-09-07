@@ -12,6 +12,13 @@
 
 # testing
 /coverage
+/playwright-report
+/test-results
+/blob-report
+/eval/reports
+
+# local rehearsal state (memory + learning queue)
+/.data
 
 # next.js
 /.next/
