@@ -43,9 +43,9 @@ function ProductCard({
   const canCart = product.stock_status === "IN_STOCK" && (product.ctas ? product.ctas.includes("add_to_cart") : true);
   const fomo = fomoLine(product, country, lang);
   return (
-    <article className="midas-card">
+    <article className="midas-card" data-testid={`product-card-${product.sku}`}>
       <a href={product.pdp_url} target="_blank" rel="noreferrer" className="block">
-        <div className="relative aspect-square bg-surface-muted">
+        <div className="relative aspect-[4/3] max-h-52 bg-surface-muted">
           {product.discount_percent ? (
             <span className="midas-sale-badge absolute start-0 top-0 z-10">{product.discount_percent}%</span>
           ) : null}
@@ -57,12 +57,12 @@ function ProductCard({
             <div className="flex h-full items-center justify-center text-[12px] text-text-muted">No image</div>
           )}
         </div>
-        <div className="space-y-2 p-3 text-center">
+        <div className="space-y-1.5 p-3 text-center">
           {product.brand ? (
             <p className="text-[12px] tracking-[0.03em] text-text-muted uppercase">{product.brand}</p>
           ) : null}
-          <p className="min-h-10 text-[14px] leading-snug font-semibold text-ink">{title}</p>
-          <p className="text-[12px] text-text-muted" dir="ltr">
+          <p className="text-[16px] leading-snug font-semibold text-ink">{title}</p>
+          <p className="text-[13px] font-semibold text-ink" dir="ltr" data-testid="product-sku">
             SKU {product.sku}
           </p>
           <div className="space-y-0.5" dir="ltr">
@@ -77,7 +77,11 @@ function ProductCard({
           </div>
         </div>
       </a>
-      {fomo ? <p className="px-3 pb-2 text-center text-[12px] leading-snug text-accent-red">{fomo}</p> : null}
+      {fomo ? (
+        <p className="px-3 pb-2 text-center text-[12px] leading-snug font-semibold text-accent-red" data-testid="product-fomo">
+          {fomo}
+        </p>
+      ) : null}
       <div className="space-y-2 px-3 pb-3">
         {canCart ? (
           <a
@@ -85,12 +89,13 @@ function ProductCard({
             target="_blank"
             rel="noreferrer"
             className="midas-btn-pill-ink"
+            data-testid="product-add-to-cart"
             aria-label={ar ? "أضف إلى السلة" : "Add to cart"}
           >
             {ar ? "أضف إلى السلة" : "Add to cart"}
           </a>
         ) : null}
-        <a href={product.pdp_url} target="_blank" rel="noreferrer" className="midas-btn-pill w-full">
+        <a href={product.pdp_url} target="_blank" rel="noreferrer" className="block text-center text-[13px] font-semibold text-ink underline">
           {ar ? "عرض المنتج" : "View product"}
         </a>
       </div>
@@ -285,7 +290,13 @@ export function ChatWidget() {
                   {m.content}
                 </div>
                 {m.ui?.products?.length ? (
-                  <div className="grid gap-3 sm:grid-cols-3">
+                  <div
+                    className={
+                      m.ui.products.length === 1
+                        ? "max-w-sm"
+                        : "grid gap-3 sm:grid-cols-2 lg:grid-cols-3"
+                    }
+                  >
                     {m.ui.products.map((p) => (
                       <ProductCard key={p.sku} product={p} ar={ar} country={country} />
                     ))}
