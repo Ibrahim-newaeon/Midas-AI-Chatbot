@@ -15,6 +15,8 @@ export type StoreCode = (typeof STORE_CODES)[number];
 
 export type WebsiteId = "kuwait" | "qatar" | "ksa" | "jordan" | "bahrain";
 
+export type CatalogSource = "live" | "mirror";
+
 export type SessionContext = {
   store_code: StoreCode;
   website: WebsiteId;
@@ -26,11 +28,15 @@ export type SessionContext = {
   customer_logged_in: boolean;
   channel: "web";
   chat_session_id: string | null;
+  catalog: CatalogSource;
 };
 
 export const STORE_MAP: Record<
   StoreCode,
-  Omit<SessionContext, "store_code" | "page_sku" | "customer_logged_in" | "channel" | "chat_session_id">
+  Omit<
+    SessionContext,
+    "store_code" | "page_sku" | "customer_logged_in" | "channel" | "chat_session_id" | "catalog"
+  >
 > = {
   en: { website: "kuwait", locale: "en", language: "en", currency: "KWD", base_path: "/en/" },
   ar: { website: "kuwait", locale: "ar", language: "ar", currency: "KWD", base_path: "/ar/" },
@@ -79,7 +85,7 @@ export function isStoreCode(value: string | null | undefined): value is StoreCod
 
 export function sessionFromStoreCode(
   store_code: StoreCode,
-  extras?: Partial<Pick<SessionContext, "page_sku" | "customer_logged_in" | "chat_session_id">>,
+  extras?: Partial<Pick<SessionContext, "page_sku" | "customer_logged_in" | "chat_session_id" | "catalog">>,
 ): SessionContext {
   return {
     store_code,
@@ -88,10 +94,35 @@ export function sessionFromStoreCode(
     customer_logged_in: extras?.customer_logged_in ?? false,
     channel: "web",
     chat_session_id: extras?.chat_session_id ?? null,
+    catalog: extras?.catalog ?? "live",
   };
 }
 
 export function pdpUrl(store: SessionContext, urlKey: string) {
   const path = store.base_path.endsWith("/") ? store.base_path : `${store.base_path}/`;
+  if (store.catalog === "mirror") {
+    return `${path}${urlKey}.html`;
+  }
   return `https://midasfurniture.com${path}${urlKey}.html`;
 }
+
+export const PAIR_STORE: Record<StoreCode, StoreCode> = {
+  en: "ar",
+  ar: "en",
+  qtr_en: "qtr_ar",
+  qtr_ar: "qtr_en",
+  ksa_en: "ksa_ar",
+  ksa_ar: "ksa_en",
+  jo_en: "jo_ar",
+  jo_ar: "jo_en",
+  bhr_en: "bhr_ar",
+  bhr_ar: "bhr_en",
+};
+
+export const COUNTRY_EN_STORE: Record<WebsiteId, StoreCode> = {
+  kuwait: "en",
+  qatar: "qtr_en",
+  ksa: "ksa_en",
+  jordan: "jo_en",
+  bahrain: "bhr_en",
+};

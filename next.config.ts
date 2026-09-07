@@ -14,6 +14,10 @@ const nextConfig: NextConfig = {
         source: "/brand-fonts/nord/:file",
         destination: `${NORD}/:file`,
       },
+      {
+        source: "/:store/:slug.html",
+        destination: "/:store/:slug",
+      },
     ];
   },
 };

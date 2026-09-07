@@ -32,19 +32,22 @@ function ProductCard({
   product,
   ar,
   country,
+  sameOrigin = false,
 }: {
   product: ProductDto & { title?: string; ctas?: ProductCta[] };
   ar: boolean;
   country: string;
+  sameOrigin?: boolean;
 }) {
   const price = formatPrice(product, ar);
   const lang = ar ? "ar" : "en";
   const title = product.title ?? pieceHeadline(product, lang);
   const canCart = product.stock_status === "IN_STOCK" && (product.ctas ? product.ctas.includes("add_to_cart") : true);
   const fomo = fomoLine(product, country, lang);
+  const extraLink = sameOrigin ? {} : { target: "_blank" as const, rel: "noreferrer" };
   return (
     <article className="midas-card" data-testid={`product-card-${product.sku}`}>
-      <a href={product.pdp_url} target="_blank" rel="noreferrer" className="block">
+      <a href={product.pdp_url} {...extraLink} className="block">
         <div className="relative aspect-[4/3] max-h-52 bg-surface-muted">
           {product.discount_percent ? (
             <span className="midas-sale-badge absolute start-0 top-0 z-10">{product.discount_percent}%</span>
@@ -86,8 +89,7 @@ function ProductCard({
         {canCart ? (
           <a
             href={product.pdp_url}
-            target="_blank"
-            rel="noreferrer"
+            {...extraLink}
             className="midas-btn-pill-ink"
             data-testid="product-add-to-cart"
             aria-label={ar ? "أضف إلى السلة" : "Add to cart"}
@@ -95,7 +97,7 @@ function ProductCard({
             {ar ? "أضف إلى السلة" : "Add to cart"}
           </a>
         ) : null}
-        <a href={product.pdp_url} target="_blank" rel="noreferrer" className="block text-center text-[13px] font-semibold text-ink underline">
+        <a href={product.pdp_url} {...extraLink} className="block text-center text-[13px] font-semibold text-ink underline">
           {ar ? "عرض المنتج" : "View product"}
         </a>
       </div>
@@ -103,8 +105,17 @@ function ProductCard({
   );
 }
 
-export function ChatWidget() {
-  const [store, setStore] = useState<StoreCode>("en");
+export function ChatWidget({
+  lockedStore,
+  pageSku: pageSkuProp = null,
+  catalog = "live",
+}: {
+  lockedStore?: StoreCode;
+  pageSku?: string | null;
+  catalog?: "live" | "mirror";
+} = {}) {
+  const [store, setStore] = useState<StoreCode>(lockedStore ?? "en");
+  const [detectedSku, setDetectedSku] = useState<string | null>(null);
   const [input, setInput] = useState("");
   const [image, setImage] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
@@ -115,7 +126,11 @@ export function ChatWidget() {
   const pendingRef = useRef(false);
   const messagesRef = useRef<Bubble[]>([]);
 
-  const session = useMemo(() => sessionFromStoreCode(store), [store]);
+  const pageSku = pageSkuProp ?? detectedSku;
+  const session = useMemo(
+    () => sessionFromStoreCode(store, { page_sku: pageSku, catalog }),
+    [store, pageSku, catalog],
+  );
   const ar = session.language === "ar";
   const dir = ar ? "rtl" : "ltr";
   const country = WEBSITE_NAME[session.website][ar ? "ar" : "en"];
@@ -124,9 +139,20 @@ export function ChatWidget() {
   );
 
   useEffect(() => {
+    if (lockedStore) setStore(lockedStore);
+  }, [lockedStore]);
+
+  useEffect(() => {
+    if (pageSkuProp) return;
+    const el = document.querySelector("[data-product-sku]");
+    const sku = el?.getAttribute("data-product-sku");
+    if (sku) setDetectedSku(sku);
+  }, [pageSkuProp]);
+
+  useEffect(() => {
     let cancelled = false;
     setFeatured([]);
-    fetch(`/api/offers?store=${store}`)
+    fetch(`/api/offers?store=${store}&catalog=${catalog}`)
       .then((res) => res.json())
       .then((json) => {
         if (!cancelled && json.ok) setFeatured(json.products ?? []);
@@ -137,7 +163,7 @@ export function ChatWidget() {
     return () => {
       cancelled = true;
     };
-  }, [store]);
+  }, [store, catalog]);
 
   async function send(text: string, dataUrl = image) {
     const content = text.trim();
@@ -161,7 +187,7 @@ export function ChatWidget() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          session: { ...session, chat_session_id: chatSessionId.current },
+          session: { ...session, chat_session_id: chatSessionId.current, catalog, page_sku: pageSku },
           messages: nextMessages.map(({ role, content }) => ({ role, content })),
           image_data_url: dataUrl,
         }),
@@ -203,28 +229,36 @@ export function ChatWidget() {
           <p className="text-[21px] font-semibold text-ink">Midas AI</p>
           <p className="text-[12px] text-text-muted">
             {ar
-              ? "مساعد التسوق الرسمي — أسعار ومخزون هذا المتجر فقط"
-              : "Official shopping assistant — this store’s live catalog"}
+              ? catalog === "mirror"
+                ? "مساعد التسوق — كتالوج المرآة لهذه الدولة فقط"
+                : "مساعد التسوق الرسمي — أسعار ومخزون هذا المتجر فقط"
+              : catalog === "mirror"
+                ? "Shopping assistant — this country’s demo catalog only"
+                : "Official shopping assistant — this store’s live catalog"}
           </p>
         </div>
-        <label className="text-[12px]">
-          <span className="mb-1 block tracking-[0.03em] text-text-muted uppercase">{ar ? "المتجر" : "Store"}</span>
-          <select
-            className="midas-input h-11 min-w-48 px-5"
-            value={store}
-            onChange={(e) => {
-              setStore(e.target.value as StoreCode);
-              messagesRef.current = [];
-              setMessages([]);
-            }}
-          >
-            {STORE_CODES.map((code) => (
-              <option key={code} value={code}>
-                {STORE_LABELS[code]}
-              </option>
-            ))}
-          </select>
-        </label>
+        {lockedStore ? (
+          <p className="text-[12px] font-semibold text-ink">{STORE_LABELS[store]}</p>
+        ) : (
+          <label className="text-[12px]">
+            <span className="mb-1 block tracking-[0.03em] text-text-muted uppercase">{ar ? "المتجر" : "Store"}</span>
+            <select
+              className="midas-input h-11 min-w-48 px-5"
+              value={store}
+              onChange={(e) => {
+                setStore(e.target.value as StoreCode);
+                messagesRef.current = [];
+                setMessages([]);
+              }}
+            >
+              {STORE_CODES.map((code) => (
+                <option key={code} value={code}>
+                  {STORE_LABELS[code]}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
       </header>
 
       <ScrollArea className="flex-1 bg-page">
@@ -267,7 +301,7 @@ export function ChatWidget() {
                   </p>
                   <div className="grid gap-3 sm:grid-cols-3">
                     {featured.map((p) => (
-                      <ProductCard key={p.sku} product={p} ar={ar} country={country} />
+                      <ProductCard key={p.sku} product={p} ar={ar} country={country} sameOrigin={catalog === "mirror"} />
                     ))}
                   </div>
                 </div>
@@ -298,7 +332,7 @@ export function ChatWidget() {
                     }
                   >
                     {m.ui.products.map((p) => (
-                      <ProductCard key={p.sku} product={p} ar={ar} country={country} />
+                      <ProductCard key={p.sku} product={p} ar={ar} country={country} sameOrigin={catalog === "mirror"} />
                     ))}
                   </div>
                 ) : null}

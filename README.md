@@ -26,8 +26,27 @@ No API key is required for text search. Magento is called from this Next.js serv
 
 Optional `env.example` values:
 
-- `MAGENTO_GRAPHQL_URL` — defaults to `https://midasfurniture.com/graphql`
+- `MAGENTO_GRAPHQL_URL` — defaults to `https://midasfurniture.com/graphql` (used by the assistant on `/`)
 - `OPENAI_API_KEY` — only used to describe an uploaded photo before catalog search. Without it, photo search uses the caption you type.
+
+## Magento mirror (demo storefront)
+
+Before the widget sits on live Midas, rehearse Part A/B on a Magento-shaped mirror. **Not live checkout.** Wallet is not included.
+
+```
+http://localhost:43217/demo
+http://localhost:43217/en/          Kuwait English
+http://localhost:43217/ar/          Kuwait Arabic
+http://localhost:43217/qtr_en/      Qatar English
+http://localhost:43217/ksa_en/      KSA English
+http://localhost:43217/jo_en/       Jordan English (LONDER is out of stock here)
+```
+
+Each country has **English + Arabic** homes. Each home lists two PDPs (LONDER bedroom set `154534`, OVALO sofa `170423`). Prices are fixtures per website, not currency conversions.
+
+Chat on those pages sends `catalog: "mirror"` and reads mock GraphQL (`/api/graphql`, same `Store` header). Chat on `/` still uses live `midasfurniture.com/graphql`.
+
+Demo **Add to cart** on a PDP stores a local cart (`/{store}/cart`). It does not write the real Midas cart.
 
 ## What is implemented
 
@@ -41,7 +60,7 @@ Optional `env.example` values:
 - “What’s on offer?” reads live Magento sale categories — not a keyword search for the word “offers”
 - Majlis queries search seating, not dining
 - Pasted `midasfurniture.com` product links **load that piece**: exact Magento `url_key` lookup, then identity copy (`LONDER Bedroom Set, SKU 154534, 495 KWD…`), a grounded FOMO line, and Add to cart
-- No invented SKUs, no AR, no cross-country stock
+- **Magento mirror** at `/demo` and `/{store}/` — EN+AR storefronts, fixture catalog, local demo cart. `/` still uses live Magento.
 
 ## Key files
 

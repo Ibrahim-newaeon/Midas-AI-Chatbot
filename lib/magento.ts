@@ -1,3 +1,5 @@
+import { currentCatalog } from "@/lib/catalogContext";
+import { executeMirrorGraphql } from "@/lib/mirrorGraphql";
 import { expandSearchQueries, isSeatingIntent } from "@/lib/arabicNormalize";
 import { pdpUrl, type SessionContext, type StoreCode, STORE_MAP } from "@/lib/stores";
 import type { ProductDto, StockStatus } from "@/lib/types";
@@ -41,6 +43,19 @@ type MagentoProduct = {
 };
 
 async function magentoGraphql<T>(store: StoreCode, query: string, variables?: Record<string, unknown>): Promise<T> {
+  if (currentCatalog() === "mirror") {
+    const json = executeMirrorGraphql(store, { query, variables }) as {
+      data?: T;
+      errors?: Array<{ message: string }>;
+    };
+    if (json.errors?.length) {
+      throw new Error(json.errors.map((e) => e.message).join("; "));
+    }
+    if (!json.data) {
+      throw new Error("Mirror Magento returned no data");
+    }
+    return json.data;
+  }
   const res = await fetch(GRAPHQL_URL, {
     method: "POST",
     headers: {
@@ -106,6 +121,7 @@ export function sessionFor(store_code: StoreCode): SessionContext {
     customer_logged_in: false,
     channel: "web",
     chat_session_id: null,
+    catalog: currentCatalog(),
   };
 }
 

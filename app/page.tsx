@@ -25,6 +25,17 @@ export default function Home() {
       <div className="bg-accent-red py-2.5 text-center text-[14px] font-semibold text-on-ink">
         Holiday Sale is Here — live Magento prices. Ask Midas AI “What’s on offer?”
       </div>
+      <p className="border-b border-line bg-surface-off py-2 text-center text-[13px]">
+        <a href="/demo" className="font-semibold underline">
+          Open the Magento mirror
+        </a>
+        {" — "}
+        demo storefronts per country (English + Arabic), fixture catalog, then connect live Magento.
+        {" · "}
+        <a href="/en/" className="underline">
+          Kuwait English demo
+        </a>
+      </p>
       <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col bg-surface-off px-0 sm:px-4 sm:py-6">
         <ChatWidget />
       </main>

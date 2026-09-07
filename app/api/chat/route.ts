@@ -3,6 +3,7 @@ import { runChat } from "@/lib/orchestrator";
 import { sessionFromStoreCode } from "@/lib/stores";
 import { ChatRequestSchema } from "@/lib/schemas";
 import { safeRefusal, toTruth, verifySendGate } from "@/lib/verifier";
+import { runWithCatalog } from "@/lib/catalogContext";
 
 export const runtime = "nodejs";
 
@@ -20,10 +21,12 @@ export async function POST(req: Request) {
   }
 
   const body = parsed.data;
+  const catalog = body.session.catalog === "mirror" ? "mirror" : "live";
   const session = sessionFromStoreCode(body.session.store_code, {
     page_sku: body.session.page_sku ?? null,
     customer_logged_in: Boolean(body.session.customer_logged_in),
     chat_session_id: body.session.chat_session_id ?? null,
+    catalog,
   });
 
   const messages = body.messages.filter((m) => m.content.length > 0).slice(-12);
@@ -32,11 +35,13 @@ export async function POST(req: Request) {
   }
 
   try {
-    const turn = await runChat({
-      session,
-      messages,
-      image_data_url: body.image_data_url,
-    });
+    const turn = await runWithCatalog(catalog, () =>
+      runChat({
+        session,
+        messages,
+        image_data_url: body.image_data_url,
+      }),
+    );
     const facts = (turn.ui.products ?? []).map((p) => toTruth(p, session.store_code));
     const gate = verifySendGate(turn, facts, session.store_code);
     if (!gate.ok) {

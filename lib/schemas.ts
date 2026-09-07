@@ -10,6 +10,7 @@ export const ChatRequestSchema = z.object({
       page_sku: z.string().min(1).max(64).nullable().optional(),
       customer_logged_in: z.boolean().optional(),
       chat_session_id: z.string().max(80).optional(),
+      catalog: z.enum(["live", "mirror"]).optional(),
     })
     .passthrough(),
   messages: z
