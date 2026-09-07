@@ -6,6 +6,8 @@
 
 Please open the preview first, then use this note as the walkthrough. It explains what Midas AI is, lists what is in this build, and is explicit about what this link does **not** do yet.
 
+A copy of this document: [docs/Midas-AI-Client-Brief.md](https://github.com/Ibrahim-newaeon/Midas-AI-Chatbot/blob/main/docs/Midas-AI-Client-Brief.md)
+
 ---
 
 ## Preview link
@@ -19,6 +21,7 @@ Send this URL with this brief. Click **Try Midas AI** (bottom corner on desktop;
 | [Home — live Magento catalog](https://temporary-instant-obsidian-e3mm1b0.vercel.app/) | Real prices and stock from midasfurniture.com. Use the store menu (Kuwait, Qatar, KSA, Jordan, Bahrain · English / Arabic). |
 | [Kuwait English demo storefront](https://temporary-instant-obsidian-e3mm1b0.vercel.app/en/) | Safer first look. Same assistant rules, rehearsal catalog. |
 | [All country demos](https://temporary-instant-obsidian-e3mm1b0.vercel.app/demo) | Ten storefronts (5 countries × English + Arabic). |
+| [This brief](https://temporary-instant-obsidian-e3mm1b0.vercel.app/brief) | Same document as a page. Print or Save as PDF from the browser. |
 
 Click **Try Midas AI** (bottom corner on desktop; full screen on a phone). Chrome or Safari.
 
