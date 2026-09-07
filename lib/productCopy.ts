@@ -1,18 +1,17 @@
-type Currency = "KWD" | "QAR" | "SAR" | "JOD" | "BHD";
 type Lang = "en" | "ar";
 
 type Piece = {
   sku: string;
   name: string;
   categories: string[];
-  currency: Currency;
+  currency: string;
   regular_price: number;
   final_price: number;
   discount_percent: number | null;
   stock_status: "IN_STOCK" | "OUT_OF_STOCK";
 };
 
-const CURRENCY_AR: Record<Currency, string> = {
+const CURRENCY_AR: Record<string, string> = {
   KWD: "د.ك",
   QAR: "ر.ق",
   SAR: "ر.س",
@@ -57,7 +56,7 @@ function amount(value: number) {
 }
 
 export function identityPrice(product: Piece, lang: Lang): string {
-  const cur = lang === "ar" ? CURRENCY_AR[product.currency] : product.currency;
+  const cur = lang === "ar" ? CURRENCY_AR[product.currency] ?? product.currency : product.currency;
   const now = `${amount(product.final_price)} ${cur}`;
   if (product.regular_price > product.final_price) {
     return `${now} (was ${amount(product.regular_price)})`;

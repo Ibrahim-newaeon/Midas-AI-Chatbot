@@ -8,11 +8,17 @@ export const runtime = "nodejs";
 export async function GET(req: Request) {
   const url = new URL(req.url);
   const store = url.searchParams.get("store");
-  const catalog = url.searchParams.get("catalog") === "mirror" ? "mirror" : "live";
+  const catalog =
+    url.searchParams.get("catalog") === "mirror"
+      ? "mirror"
+      : url.searchParams.get("catalog") === "import"
+        ? "import"
+        : "live";
+  const tenantId = url.searchParams.get("tenant");
   if (!isStoreCode(store)) {
     return NextResponse.json({ ok: false, error: "invalid_store" }, { status: 400 });
   }
-  const result = await runWithCatalog(catalog, () => searchOnSale(store, 3), "widget");
+  const result = await runWithCatalog(catalog, () => searchOnSale(store, 3), "widget", tenantId);
   if (!result.ok) {
     return NextResponse.json({ ok: false, error: result.error, products: [] });
   }

@@ -10,12 +10,14 @@ export function MidasAiWidget({
   lockedStore,
   pageSku,
   catalog = "live",
+  tenantId = null,
   embed = false,
   defaultOpen = false,
 }: {
   lockedStore?: StoreCode;
   pageSku?: string | null;
-  catalog?: "live" | "mirror";
+  catalog?: "live" | "mirror" | "import";
+  tenantId?: string | null;
   embed?: boolean;
   defaultOpen?: boolean;
 }) {
@@ -90,7 +92,7 @@ export function MidasAiWidget({
       }
     >
       <div className="flex min-h-0 flex-1 flex-col">
-        <ChatWidget lockedStore={lockedStore} pageSku={pageSku} catalog={catalog} variant="dock" onClose={() => setOpen(false)} />
+        <ChatWidget lockedStore={lockedStore} pageSku={pageSku} catalog={catalog} tenantId={tenantId} variant="dock" onClose={() => setOpen(false)} />
       </div>
     </section>
   );

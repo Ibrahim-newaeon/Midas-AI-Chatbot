@@ -28,7 +28,7 @@ const STORE_CURRENCY: Record<StoreCode, ProductDto["currency"]> = {
 };
 
 const CURRENCY_TOKEN =
-  /(\d[\d,]*(?:\.\d{1,3})?)\s*(KWD|QAR|SAR|JOD|BHD|د\.ك|ر\.ق|ر\.س|د\.أ|د\.ب)/g;
+  /(\d[\d,]*(?:\.\d{1,3})?)\s*(KWD|QAR|SAR|JOD|BHD|USD|EUR|GBP|AED|د\.ك|ر\.ق|ر\.س|د\.أ|د\.ب)/g;
 
 function symbolMatchesCurrency(symbol: string, cur: string): boolean {
   const map: Record<string, string> = {
@@ -58,13 +58,14 @@ export function verifySendGate(
   facts: ProductTruth[],
   storeCode: StoreCode,
   ttlMs = Number(process.env.TRUTH_TTL_MS ?? 60_000),
+  opts?: { expectedCurrency?: string },
 ): Verdict {
   if (!(storeCode in STORE_CURRENCY)) {
     return { ok: false, reason: "invalid_store" };
   }
   const scoped = facts.filter((f) => f.storeCode === storeCode);
   const bySku = new Map(scoped.map((f) => [f.sku, f]));
-  const expectedCurrency = STORE_CURRENCY[storeCode];
+  const expectedCurrency = opts?.expectedCurrency ?? STORE_CURRENCY[storeCode];
 
   for (const p of draft.ui.products ?? []) {
     const f = bySku.get(p.sku);

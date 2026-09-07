@@ -1,5 +1,7 @@
 import { readFile } from "fs/promises";
 import path from "path";
+import { currentCatalog, currentTenantId } from "@/lib/catalogContext";
+import { getTenant } from "@/lib/importedCatalog";
 import { recordUnanswered } from "@/lib/learningQueue";
 import { recallProfile, rememberTurn } from "@/lib/memory";
 import { identityReply, pieceHeadline } from "@/lib/productCopy";
@@ -49,7 +51,7 @@ function money(product: ProductDto, lang: "en" | "ar") {
     minimumFractionDigits: 0,
     maximumFractionDigits: 2,
   });
-  if (lang === "ar") return `${amount} ${CURRENCY_AR[product.currency]}`;
+  if (lang === "ar") return `${amount} ${CURRENCY_AR[product.currency as keyof typeof CURRENCY_AR] ?? product.currency}`;
   return `${amount} ${product.currency}`;
 }
 
@@ -143,7 +145,8 @@ export async function runRulesOrchestrator(input: {
   const session = input.session;
   const last = redactPii([...input.messages].reverse().find((m) => m.role === "user")?.content?.trim() || "");
   const lang = replyLanguage(session, last);
-  const country = WEBSITE_NAME[session.website][lang];
+  const tenant = currentCatalog() === "import" && currentTenantId() ? await getTenant(currentTenantId()!) : null;
+  const country = tenant?.name ?? WEBSITE_NAME[session.website][lang];
   const used: string[] = [];
   const constraints = extractConstraints(input.messages);
 

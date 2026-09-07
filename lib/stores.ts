@@ -15,7 +15,7 @@ export type StoreCode = (typeof STORE_CODES)[number];
 
 export type WebsiteId = "kuwait" | "qatar" | "ksa" | "jordan" | "bahrain";
 
-export type CatalogSource = "live" | "mirror";
+export type CatalogSource = "live" | "mirror" | "import";
 
 export type ChatChannel = "web" | "widget" | "whatsapp" | "instagram";
 
@@ -31,13 +31,14 @@ export type SessionContext = {
   channel: ChatChannel;
   chat_session_id: string | null;
   catalog: CatalogSource;
+  tenant_id: string | null;
 };
 
 export const STORE_MAP: Record<
   StoreCode,
   Omit<
     SessionContext,
-    "store_code" | "page_sku" | "customer_logged_in" | "channel" | "chat_session_id" | "catalog"
+    "store_code" | "page_sku" | "customer_logged_in" | "channel" | "chat_session_id" | "catalog" | "tenant_id"
   >
 > = {
   en: { website: "kuwait", locale: "en", language: "en", currency: "KWD", base_path: "/en/" },
@@ -87,7 +88,9 @@ export function isStoreCode(value: string | null | undefined): value is StoreCod
 
 export function sessionFromStoreCode(
   store_code: StoreCode,
-  extras?: Partial<Pick<SessionContext, "page_sku" | "customer_logged_in" | "chat_session_id" | "catalog" | "channel">>,
+  extras?: Partial<
+    Pick<SessionContext, "page_sku" | "customer_logged_in" | "chat_session_id" | "catalog" | "channel" | "tenant_id">
+  >,
 ): SessionContext {
   return {
     store_code,
@@ -97,6 +100,7 @@ export function sessionFromStoreCode(
     channel: extras?.channel ?? "web",
     chat_session_id: extras?.chat_session_id ?? null,
     catalog: extras?.catalog ?? "live",
+    tenant_id: extras?.tenant_id ?? null,
   };
 }
 

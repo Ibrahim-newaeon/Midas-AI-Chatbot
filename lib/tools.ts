@@ -1,4 +1,5 @@
-import { currentCatalog } from "@/lib/catalogContext";
+import { currentCatalog, currentChannel } from "@/lib/catalogContext";
+import { getImportedBySku, getImportedByUrlKey, importedOnSale, searchImported } from "@/lib/importedCatalog";
 import { copyText, cosine, embedText } from "@/lib/embeddings";
 import { hybridRank, lexicalTokens } from "@/lib/hybridSearch";
 import { MIRROR_PRODUCTS } from "@/lib/mirrorCatalog";
@@ -58,6 +59,11 @@ export async function searchCatalog(
   input: SearchCatalogInput,
 ): Promise<ToolOk<{ store_code: StoreCode; currency: string; products: ProductDto[] }> | ToolErr> {
   if (!isStoreCode(input.store_code)) return badStore(input.store_code);
+  if (currentCatalog() === "import") {
+    const products = await searchImported(input, currentChannel());
+    const currency = products[0]?.currency ?? "USD";
+    return { ok: true as const, store_code: input.store_code, currency, products };
+  }
   const store = sessionFor(input.store_code);
   const pageSize = Math.min(Math.max(input.page_size ?? 6, 1), 12);
   const sofaIntent = isSofaIntent([input.query, input.room].filter(Boolean).join(" "));
@@ -167,6 +173,24 @@ export async function searchCatalog(
 
 export async function searchOnSale(store_code: StoreCode, page_size = 3, extraQuery?: string) {
   if (!isStoreCode(store_code)) return badStore(store_code);
+  if (currentCatalog() === "import") {
+    let products = await importedOnSale(Math.max(page_size, 8), currentChannel());
+    if (extraQuery?.trim()) {
+      const tokens = tokenize(extraQuery);
+      const narrowed = products.filter((p) => {
+        const hay = `${p.name} ${p.categories.join(" ")}`.toLowerCase();
+        return tokens.some((t) => hay.includes(t));
+      });
+      if (narrowed.length) products = narrowed;
+    }
+    if (!products.length) return { ok: false as const, error: "no_sale_items" as const, store_code };
+    return {
+      ok: true as const,
+      store_code,
+      currency: products[0].currency,
+      products: products.slice(0, page_size),
+    };
+  }
   const store = sessionFor(store_code);
   const extra = extraQuery?.trim();
   const bySku = new Map<string, ProductDto>();
@@ -237,6 +261,16 @@ export async function searchOnSale(store_code: StoreCode, page_size = 3, extraQu
 
 export async function getCurrentPromotions(store_code: StoreCode) {
   if (!isStoreCode(store_code)) return badStore(store_code);
+  if (currentCatalog() === "import") {
+    const sale = await searchOnSale(store_code, 3);
+    return {
+      ok: true as const,
+      store_code,
+      currency: sale.ok ? sale.currency : "USD",
+      campaigns: sale.ok ? ["Imported sale prices"] : [],
+      products: sale.ok ? sale.products : [],
+    };
+  }
   const store = sessionFor(store_code);
   const [sale, categories] = await Promise.all([
     searchOnSale(store_code, 3),
@@ -253,6 +287,11 @@ export async function getCurrentPromotions(store_code: StoreCode) {
 
 export async function getProductByUrlKey(store_code: StoreCode, url_key: string) {
   if (!isStoreCode(store_code)) return badStore(store_code);
+  if (currentCatalog() === "import") {
+    const product = await getImportedByUrlKey(url_key, currentChannel());
+    if (!product) return { ok: false as const, error: "not_found" as const, url_key };
+    return { ok: true as const, store_code, currency: product.currency, product };
+  }
   const store = sessionFor(store_code);
   try {
     const raw = await getMagentoByUrlKey(store, url_key.trim());
@@ -266,6 +305,11 @@ export async function getProductByUrlKey(store_code: StoreCode, url_key: string)
 
 export async function getProduct(store_code: StoreCode, sku: string) {
   if (!isStoreCode(store_code)) return badStore(store_code);
+  if (currentCatalog() === "import") {
+    const product = await getImportedBySku(sku, currentChannel());
+    if (!product) return { ok: false as const, error: "not_found" as const, sku };
+    return { ok: true as const, store_code, currency: product.currency, product };
+  }
   const store = sessionFor(store_code);
   try {
     const raw = await getMagentoBySku(store, sku.trim());

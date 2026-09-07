@@ -39,6 +39,13 @@ Consider **all** of these. Do not drop a line because it is “later” — it s
 
 Paste a PDP URL, Arabizi, don’t “correct” Arabic spelling, injection / 90% off, last-three-SKU follow-ups, UTM on product links.
 
+## Packaging (any website)
+
+- [x] **Setup page** (`/setup`): client name, store URL, CSV upload or REST products URL. Rehearsal chat at `/t/{id}`. Script: `data-catalog="import" data-tenant="{id}"`.
+- [ ] **Durable tenant storage.** Today `.data/` on disk (resets on Vercel). Database or blob store for production.
+- [ ] **Live REST refresh / webhooks** so CSV/REST snapshots do not go stale.
+- [ ] **Per-client add-to-cart hook** documented for PHP / HTML / ASP.NET (listen for `midas:add_to_cart`).
+
 ## Go-live (unchanged, still on the list)
 
 - [ ] Widget script on midasfurniture.com (`/widget/midas-ai.js`).

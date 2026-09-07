@@ -1,4 +1,4 @@
-import { currentCatalog, currentChannel } from "@/lib/catalogContext";
+import { currentCatalog, currentChannel, currentTenantId } from "@/lib/catalogContext";
 import { executeMirrorGraphql } from "@/lib/mirrorGraphql";
 import { expandSearchQueries, isSeatingIntent } from "@/lib/arabicNormalize";
 import { pdpUrl, type SessionContext, type StoreCode, STORE_MAP } from "@/lib/stores";
@@ -123,6 +123,7 @@ export function sessionFor(store_code: StoreCode): SessionContext {
     channel: currentChannel(),
     chat_session_id: null,
     catalog: currentCatalog(),
+    tenant_id: currentTenantId(),
   };
 }
 

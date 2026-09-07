@@ -49,12 +49,15 @@
 
   var script = document.currentScript;
   var origin = new URL(script.src).origin;
-  var catalog = (script.getAttribute("data-catalog") || "live").toLowerCase();
+  var catalogAttr = (script.getAttribute("data-catalog") || "live").toLowerCase();
+  var catalog = catalogAttr === "mirror" ? "mirror" : catalogAttr === "import" ? "import" : "live";
+  var tenant = script.getAttribute("data-tenant") || "";
   var store =
+    script.getAttribute("data-store") ||
     storeFromBaseUrl() ||
     storeFromPath(window.location.pathname) ||
     (STORE_MAP[readCookie("store")] ? readCookie("store") : "en");
-  var rtl = (STORE_MAP[store] || {}).language === "ar";
+  var rtl = (STORE_MAP[store] || {}).language === "ar" || script.getAttribute("data-language") === "ar";
 
   var iframe = document.createElement("iframe");
   iframe.title = "Midas AI";
@@ -65,7 +68,8 @@
     "/embed?store=" +
     encodeURIComponent(store) +
     "&catalog=" +
-    encodeURIComponent(catalog === "mirror" ? "mirror" : "live") +
+    encodeURIComponent(catalog) +
+    (tenant ? "&tenant=" + encodeURIComponent(tenant) : "") +
     (pageSku() ? "&sku=" + encodeURIComponent(pageSku()) : "");
 
   function place(open, mobile) {

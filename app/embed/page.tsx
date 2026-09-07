@@ -10,7 +10,9 @@ function EmbedInner() {
   const params = useSearchParams();
   const storeParam = params.get("store");
   const store = isStoreCode(storeParam) ? storeParam : undefined;
-  const catalog = params.get("catalog") === "mirror" ? "mirror" : "live";
+  const catalog =
+    params.get("catalog") === "mirror" ? "mirror" : params.get("catalog") === "import" ? "import" : "live";
+  const tenantId = params.get("tenant");
   const sku = params.get("sku");
   const defaultOpen = params.get("open") === "1";
 
@@ -24,6 +26,7 @@ function EmbedInner() {
     <MidasAiWidget
       lockedStore={store}
       catalog={catalog}
+      tenantId={tenantId}
       pageSku={sku}
       embed
       defaultOpen={defaultOpen}

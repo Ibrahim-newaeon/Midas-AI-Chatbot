@@ -46,7 +46,9 @@ export async function POST(req: Request) {
   }
 
   const body = parsed.data;
-  const catalog = body.session.catalog === "mirror" ? "mirror" : "live";
+  const catalog =
+    body.session.catalog === "mirror" ? "mirror" : body.session.catalog === "import" ? "import" : "live";
+  const tenantId = catalog === "import" ? body.session.tenant_id ?? null : null;
   const channel =
     body.session.channel === "whatsapp" || body.session.channel === "instagram"
       ? body.session.channel
@@ -57,6 +59,7 @@ export async function POST(req: Request) {
     chat_session_id: body.session.chat_session_id ?? null,
     catalog,
     channel,
+    tenant_id: tenantId,
   });
 
   const messages = body.messages.filter((m) => m.content.length > 0).slice(-12);
@@ -74,9 +77,12 @@ export async function POST(req: Request) {
           image_data_url: body.image_data_url,
         }),
       channel,
+      tenantId,
     );
     const facts = (turn.ui.products ?? []).map((p) => toTruth(p, session.store_code));
-    const gate = verifySendGate(turn, facts, session.store_code);
+    const gate = verifySendGate(turn, facts, session.store_code, undefined, {
+      expectedCurrency: catalog === "import" ? facts[0]?.currency : undefined,
+    });
     if (!gate.ok) {
       await recordUnanswered({
         store_code: session.store_code,

@@ -13,7 +13,7 @@ export type ProductDto = {
   pdp_url: string;
   regular_price: number;
   final_price: number;
-  currency: SessionContext["currency"];
+  currency: string;
   discount_percent: number | null;
   stock_status: StockStatus;
   categories: string[];

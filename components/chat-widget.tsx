@@ -26,7 +26,7 @@ function formatPrice(product: ProductDto, ar: boolean) {
   const n = product.final_price.toLocaleString("en-US", { maximumFractionDigits: 2 });
   const was = product.regular_price.toLocaleString("en-US", { maximumFractionDigits: 2 });
   const cur = ar
-    ? { KWD: "د.ك", QAR: "ر.ق", SAR: "ر.س", JOD: "د.أ", BHD: "د.ب" }[product.currency]
+    ? { KWD: "د.ك", QAR: "ر.ق", SAR: "ر.س", JOD: "د.أ", BHD: "د.ب" }[product.currency] ?? product.currency
     : product.currency;
   return { n, was, cur, onSale: product.final_price < product.regular_price };
 }
@@ -133,12 +133,14 @@ export function ChatWidget({
   lockedStore,
   pageSku: pageSkuProp = null,
   catalog = "live",
+  tenantId = null,
   variant = "page",
   onClose,
 }: {
   lockedStore?: StoreCode;
   pageSku?: string | null;
-  catalog?: "live" | "mirror";
+  catalog?: "live" | "mirror" | "import";
+  tenantId?: string | null;
   variant?: "page" | "dock";
   onClose?: () => void;
 } = {}) {
@@ -160,8 +162,8 @@ export function ChatWidget({
 
   const pageSku = pageSkuProp ?? detectedSku;
   const session = useMemo(
-    () => sessionFromStoreCode(store, { page_sku: pageSku, catalog, channel: "widget" }),
-    [store, pageSku, catalog],
+    () => sessionFromStoreCode(store, { page_sku: pageSku, catalog, channel: "widget", tenant_id: tenantId }),
+    [store, pageSku, catalog, tenantId],
   );
   const ar = session.language === "ar";
   const dir = ar ? "rtl" : "ltr";
@@ -184,7 +186,7 @@ export function ChatWidget({
   useEffect(() => {
     let cancelled = false;
     setFeatured([]);
-    fetch(`/api/offers?store=${store}&catalog=${catalog}`)
+    fetch(`/api/offers?store=${store}&catalog=${catalog}${tenantId ? `&tenant=${encodeURIComponent(tenantId)}` : ""}`)
       .then((res) => res.json())
       .then((json) => {
         if (!cancelled && json.ok) setFeatured((json.products ?? []).slice(0, dock ? 2 : 3));
@@ -195,7 +197,7 @@ export function ChatWidget({
     return () => {
       cancelled = true;
     };
-  }, [store, catalog, dock]);
+  }, [store, catalog, dock, tenantId]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ block: "end" });
@@ -214,10 +216,17 @@ export function ChatWidget({
     }
     const href = withMidasAiUtm(product.pdp_url, session.channel);
     window.parent?.postMessage(
-      { type: "midas:add_to_cart", sku: product.sku, qty: 1, pdp_url: href, store_code: store },
+      { type: "midas:add_to_cart", sku: product.sku, qty: 1, pdp_url: href, store_code: store, tenant_id: tenantId },
       "*",
     );
     window.open(href, "_blank", "noopener");
+    if (catalog === "import") {
+      setCartNote(
+        ar
+          ? "فتحنا صفحة المنتج على موقع العميل. السلة الحقيقية تحتاج ربط add-to-cart عندهم."
+          : "Opened the product page on the client site. Their theme must listen for add-to-cart to write the real cart.",
+      );
+    }
   }
 
   async function send(text: string, dataUrl = image) {
@@ -251,6 +260,7 @@ export function ChatWidget({
             ...session,
             chat_session_id: chatSessionId.current,
             catalog,
+            tenant_id: tenantId,
             page_sku: pageSku,
             channel: "widget",
           },
@@ -304,12 +314,16 @@ export function ChatWidget({
           <p className="text-[18px] font-semibold text-ink sm:text-[21px]">Midas AI</p>
           <p className="truncate text-[11px] text-text-muted sm:text-[12px]">
             {ar
-              ? catalog === "mirror"
-                ? "مساعد التسوق — كتالوج المرآة لهذه الدولة فقط"
-                : "مساعد التسوق الرسمي — أسعار ومخزون هذا المتجر فقط"
-              : catalog === "mirror"
-                ? "Shopping assistant — this country’s demo catalog only"
-                : "Official shopping assistant — this store’s live catalog"}
+              ? catalog === "import"
+                ? "مساعد التسوق — كتالوج العميل المستورد"
+                : catalog === "mirror"
+                  ? "مساعد التسوق — كتالوج المرآة لهذه الدولة فقط"
+                  : "مساعد التسوق الرسمي — أسعار ومخزون هذا المتجر فقط"
+              : catalog === "import"
+                ? "Shopping assistant — this client’s imported catalog"
+                : catalog === "mirror"
+                  ? "Shopping assistant — this country’s demo catalog only"
+                  : "Official shopping assistant — this store’s live catalog"}
           </p>
         </div>
         <div className="flex shrink-0 items-center gap-1">

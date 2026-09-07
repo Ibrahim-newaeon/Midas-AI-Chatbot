@@ -1,0 +1,27 @@
+{
+  "products": [
+    {
+      "sku": "201",
+      "name": "Cove Accent Chair",
+      "price": 340,
+      "regular_price": 420,
+      "currency": "USD",
+      "stock": "IN_STOCK",
+      "url": "https://example.com/cove-accent-chair",
+      "image": "https://midasfurniture.com/media/catalog/product/placeholder/default/placeholder.jpg",
+      "category": "Living",
+      "brand": "Sample Home",
+      "color": "green",
+      "material": "velvet"
+    },
+    {
+      "sku": "202",
+      "name": "Pebble Coffee Table",
+      "price": 210,
+      "stock": "IN_STOCK",
+      "url": "https://example.com/pebble-coffee-table",
+      "category": "Living",
+      "brand": "Sample Home"
+    }
+  ]
+}
