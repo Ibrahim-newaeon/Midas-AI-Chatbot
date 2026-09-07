@@ -1,8 +1,9 @@
 import { readFile } from "fs/promises";
 import path from "path";
-import { checkStock, getCurrentPromotions, getPolicy, getProduct, getProductByUrlKey, searchCatalog, searchOnSale, visualSearch } from "@/lib/tools";
+import { identityReply, pieceHeadline } from "@/lib/productCopy";
 import { parseMidasProductUrl } from "@/lib/productLink";
 import { CURRENCY_AR, STORE_MAP, WEBSITE_NAME, type SessionContext } from "@/lib/stores";
+import { getCurrentPromotions, getPolicy, getProduct, getProductByUrlKey, searchCatalog, searchOnSale, visualSearch } from "@/lib/tools";
 import type { AssistantTurn, ChatMessage, ProductCta, ProductDto, UiPayload } from "@/lib/types";
 
 const SKU_RE = /\b(\d{4,8})\b/;
@@ -49,7 +50,7 @@ function money(product: ProductDto, lang: "en" | "ar") {
   return `${amount} ${product.currency}`;
 }
 
-function cards(products: ProductDto[], extra: ProductCta[] = ["view"]): UiPayload {
+function cards(products: ProductDto[], extra: ProductCta[] = ["view"], lang: "en" | "ar" = "en"): UiPayload {
   const sliced = products.slice(0, 3);
   const ctas: ProductCta[] = sliced.some((p) => p.stock_status === "IN_STOCK")
     ? ["view", "add_to_cart"]
@@ -57,7 +58,7 @@ function cards(products: ProductDto[], extra: ProductCta[] = ["view"]): UiPayloa
   return {
     products: sliced.map((p) => ({
       ...p,
-      title: p.name,
+      title: pieceHeadline(p, lang),
       ctas: p.stock_status === "IN_STOCK" ? (["view", "add_to_cart"] as ProductCta[]) : (["view"] as ProductCta[]),
     })),
     ctas: extra.length ? Array.from(new Set([...ctas, ...extra])) : ctas,
@@ -125,7 +126,7 @@ export async function runRulesOrchestrator(input: {
         : "I cannot create a special discount from this chat. Current sale prices are the special prices already on this store’s catalog.";
     return {
       message,
-      ui: promo.ok && promo.products.length ? cards(promo.products, ["handoff"]) : emptyUi(true, "discount_request"),
+      ui: promo.ok && promo.products.length ? cards(promo.products, ["handoff"], lang) : emptyUi(true, "discount_request"),
       used_tools: used,
       engine: "rules",
     };
@@ -164,25 +165,18 @@ export async function runRulesOrchestrator(input: {
     }
 
     const p = found.product;
-    const stockLine =
-      p.stock_status === "IN_STOCK"
-        ? lang === "ar"
-          ? "متوفر الآن"
-          : "In stock"
-        : lang === "ar"
-          ? "غير متوفر في هذا المتجر"
-          : "Not in stock on this store";
     const storeLock =
       crossStore && urlCountry
         ? lang === "ar"
           ? `الرابط من موقع ${urlCountry}. السعر أدناه من متجر ${country} بـ ${session.currency} وليس تحويلاً. `
           : `The link is from the ${urlCountry} website. The price below is the ${country} catalog in ${session.currency}, not a conversion. `
         : "";
-    const message =
-      lang === "ar"
-        ? `${storeLock}هذه القطعة من الرابط: ${p.name} — ${money(p, "ar")}${p.regular_price > p.final_price ? ` (كان ${p.regular_price})` : ""}. ${stockLine} في ${country}.`
-        : `${storeLock}This is the piece from your link: ${p.name} is ${money(p, "en")}${p.regular_price > p.final_price ? ` (was ${p.regular_price} ${p.currency})` : ""}. ${stockLine} in ${country}.`;
-    return { message, ui: cards([p]), used_tools: used, engine: "rules" };
+    return {
+      message: identityReply({ product: p, country, lang, prefix: storeLock }),
+      ui: cards([p], ["view"], lang),
+      used_tools: used,
+      engine: "rules",
+    };
   }
 
   if (/https?:\/\//i.test(last) && !catalogQuery(last)) {
@@ -239,7 +233,7 @@ export async function runRulesOrchestrator(input: {
       lang === "ar"
         ? `${policy.ok ? policy.text : ""} هذه بدائل جاهزة متوفرة في ${country}.`
         : `${policy.ok ? policy.text : ""} Here are ready-made in-stock alternatives in ${country}.`;
-    return { message, ui: cards(products), used_tools: used, engine: "rules" };
+    return { message, ui: cards(products, ["view"], lang), used_tools: used, engine: "rules" };
   }
 
   if (OFFERS_RE.test(last)) {
@@ -275,7 +269,7 @@ export async function runRulesOrchestrator(input: {
       lang === "ar"
         ? `هذه أسعار خاصة حية في متجر ${country}.${campaign} مثال: ${first.name} بسعر ${money(first, "ar")}${off ? ` (خصم ${off})` : ""}.`
         : `Live special prices in ${country}.${campaign} Example: ${first.name} at ${money(first, "en")}${off ? ` (${off} off)` : ""}.`;
-    return { message, ui: cards(products), used_tools: used, engine: "rules" };
+    return { message, ui: cards(products, ["view"], lang), used_tools: used, engine: "rules" };
   }
 
   const policyMap: Array<[RegExp, string]> = [
@@ -313,22 +307,13 @@ export async function runRulesOrchestrator(input: {
         engine: "rules",
       };
     }
-    used.push("check_stock");
-    const stock = await checkStock(session.store_code, sku);
     const p = found.product;
-    const stockLine =
-      stock.ok && stock.stock_status === "IN_STOCK"
-        ? lang === "ar"
-          ? "متوفر الآن"
-          : "In stock"
-        : lang === "ar"
-          ? "غير متوفر في هذا المتجر"
-          : "Not in stock on this store";
-    const message =
-      lang === "ar"
-        ? `${p.name} — ${money(p, "ar")}${p.regular_price > p.final_price ? ` (كان ${p.regular_price})` : ""}. ${stockLine} في ${country}.`
-        : `${p.name} is ${money(p, "en")}${p.regular_price > p.final_price ? ` (was ${p.regular_price} ${p.currency})` : ""}. ${stockLine} in ${country}.`;
-    return { message, ui: cards([p]), used_tools: used, engine: "rules" };
+    return {
+      message: identityReply({ product: p, country, lang }),
+      ui: cards([p], ["view"], lang),
+      used_tools: used,
+      engine: "rules",
+    };
   }
 
   let visionQuery: string | null = null;
@@ -345,7 +330,7 @@ export async function runRulesOrchestrator(input: {
         lang === "ar"
           ? `هذه أقرب القطع المتوفرة في ${country} بناءً على الصورة${last ? " ووصفك" : ""}. ليست بالضرورة نفس قطعة بينترست.`
           : `Closest in-stock matches in ${country} from your photo${last ? " and note" : ""}. These are style matches, not a claim that we have the exact Pinterest SKU.`;
-      return { message, ui: cards(vis.products), used_tools: used, engine: "rules" };
+      return { message, ui: cards(vis.products, ["view"], lang), used_tools: used, engine: "rules" };
     }
   }
 
@@ -405,7 +390,7 @@ export async function runRulesOrchestrator(input: {
       ? `${trap}${majlisNote}هذه قطع متوفرة في ${country}. مثال: ${first.name} بسعر ${money(first, "ar")}. هل تفضّل أن أضيّق البحث حسب المقاس أو الميزانية؟`
       : `${trap}${majlisNote}In-stock in ${country}. One option is ${first.name} at ${money(first, "en")}. Shall I narrow by size or budget?`;
 
-  return { message, ui: cards(result.products), used_tools: used, engine: "rules" };
+  return { message, ui: cards(result.products, ["view"], lang), used_tools: used, engine: "rules" };
 }
 
 export async function runChat(input: {

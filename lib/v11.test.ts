@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { expandArabiziLexicon, expandSearchQueries, normalizeArabic } from "./arabicNormalize.ts";
+import { fomoLine, identityReply, pieceHeadline } from "./productCopy.ts";
 import { parseMidasProductUrl } from "./productLink.ts";
 import { verifySendGate, type ProductTruth } from "./verifier.ts";
 
@@ -136,4 +137,27 @@ test("cart and homepage URLs are not treated as a piece", () => {
   assert.equal(parseMidasProductUrl("https://midasfurniture.com/en/cart"), null);
   assert.equal(parseMidasProductUrl("https://midasfurniture.com/en"), null);
   assert.equal(parseMidasProductUrl("https://example.com/londer-bedroom-set.html"), null);
+});
+
+const londer = {
+  sku: "154534",
+  name: "LONDER BEDROOM SET KING SIZE (193*203 CM) BLACK",
+  categories: ["Home Furniture", "Bedrooms", "King Size Bedroom Sets", "Bedroom Set Without Wardrobe"],
+  currency: "KWD" as const,
+  regular_price: 995,
+  final_price: 495,
+  discount_percent: 50,
+  stock_status: "IN_STOCK" as const,
+};
+
+test("identity headline uses collection plus category", () => {
+  assert.equal(pieceHeadline(londer, "en"), "LONDER Bedroom Set");
+});
+
+test("identity reply includes SKU, sale price, FOMO, and add to cart", () => {
+  const text = identityReply({ product: londer, country: "Kuwait", lang: "en" });
+  assert.match(text, /^LONDER Bedroom Set, SKU 154534, 495 KWD \(was 995\), in stock in Kuwait\./);
+  assert.match(text, /50% off/);
+  assert.match(text, /Add to cart\?/);
+  assert.ok(fomoLine(londer, "Kuwait", "en")?.includes("50%"));
 });

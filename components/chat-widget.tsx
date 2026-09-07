@@ -5,8 +5,9 @@ import { ImagePlus, Loader2, Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Textarea } from "@/components/ui/textarea";
-import { STORE_CODES, STORE_LABELS, sessionFromStoreCode, type StoreCode } from "@/lib/stores";
-import type { AssistantTurn, ChatMessage, ProductDto } from "@/lib/types";
+import { fomoLine, pieceHeadline } from "@/lib/productCopy";
+import { STORE_CODES, STORE_LABELS, WEBSITE_NAME, sessionFromStoreCode, type StoreCode } from "@/lib/stores";
+import type { AssistantTurn, ChatMessage, ProductCta, ProductDto } from "@/lib/types";
 
 type Bubble = ChatMessage & {
   ui?: AssistantTurn["ui"];
@@ -27,9 +28,20 @@ function formatPrice(product: ProductDto, ar: boolean) {
   return { n, was, cur, onSale: product.final_price < product.regular_price };
 }
 
-function ProductCard({ product, ar }: { product: ProductDto & { title?: string }; ar: boolean }) {
+function ProductCard({
+  product,
+  ar,
+  country,
+}: {
+  product: ProductDto & { title?: string; ctas?: ProductCta[] };
+  ar: boolean;
+  country: string;
+}) {
   const price = formatPrice(product, ar);
-  const title = product.title ?? product.name;
+  const lang = ar ? "ar" : "en";
+  const title = product.title ?? pieceHeadline(product, lang);
+  const canCart = product.stock_status === "IN_STOCK" && (product.ctas ? product.ctas.includes("add_to_cart") : true);
+  const fomo = fomoLine(product, country, lang);
   return (
     <article className="midas-card">
       <a href={product.pdp_url} target="_blank" rel="noreferrer" className="block">
@@ -50,6 +62,9 @@ function ProductCard({ product, ar }: { product: ProductDto & { title?: string }
             <p className="text-[12px] tracking-[0.03em] text-text-muted uppercase">{product.brand}</p>
           ) : null}
           <p className="min-h-10 text-[14px] leading-snug font-semibold text-ink">{title}</p>
+          <p className="text-[12px] text-text-muted" dir="ltr">
+            SKU {product.sku}
+          </p>
           <div className="space-y-0.5" dir="ltr">
             {price.onSale ? (
               <p className="text-[12px] text-text-muted line-through">
@@ -62,9 +77,23 @@ function ProductCard({ product, ar }: { product: ProductDto & { title?: string }
           </div>
         </div>
       </a>
-      <a href={product.pdp_url} target="_blank" rel="noreferrer" className="midas-btn-pill-ink">
-        {ar ? "عرض المنتج" : "View product"}
-      </a>
+      {fomo ? <p className="px-3 pb-2 text-center text-[12px] leading-snug text-accent-red">{fomo}</p> : null}
+      <div className="space-y-2 px-3 pb-3">
+        {canCart ? (
+          <a
+            href={product.pdp_url}
+            target="_blank"
+            rel="noreferrer"
+            className="midas-btn-pill-ink"
+            aria-label={ar ? "أضف إلى السلة" : "Add to cart"}
+          >
+            {ar ? "أضف إلى السلة" : "Add to cart"}
+          </a>
+        ) : null}
+        <a href={product.pdp_url} target="_blank" rel="noreferrer" className="midas-btn-pill w-full">
+          {ar ? "عرض المنتج" : "View product"}
+        </a>
+      </div>
     </article>
   );
 }
@@ -84,6 +113,7 @@ export function ChatWidget() {
   const session = useMemo(() => sessionFromStoreCode(store), [store]);
   const ar = session.language === "ar";
   const dir = ar ? "rtl" : "ltr";
+  const country = WEBSITE_NAME[session.website][ar ? "ar" : "en"];
   const chatSessionId = useRef(
     typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : `web-${Date.now()}`,
   );
@@ -232,7 +262,7 @@ export function ChatWidget() {
                   </p>
                   <div className="grid gap-3 sm:grid-cols-3">
                     {featured.map((p) => (
-                      <ProductCard key={p.sku} product={p} ar={ar} />
+                      <ProductCard key={p.sku} product={p} ar={ar} country={country} />
                     ))}
                   </div>
                 </div>
@@ -244,7 +274,7 @@ export function ChatWidget() {
             <div key={`${m.role}-${i}`} className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}>
               <div className={`max-w-[min(100%,40rem)] space-y-3 ${m.role === "user" ? "text-end" : ""}`}>
                 <div
-                  className={`rounded-[10px] px-3 py-2 text-[14px] leading-relaxed ${
+                  className={`whitespace-pre-line rounded-[10px] px-3 py-2 text-[14px] leading-relaxed ${
                     m.role === "user" ? "bg-ink text-on-ink" : "bg-surface-off text-ink"
                   }`}
                 >
@@ -257,7 +287,7 @@ export function ChatWidget() {
                 {m.ui?.products?.length ? (
                   <div className="grid gap-3 sm:grid-cols-3">
                     {m.ui.products.map((p) => (
-                      <ProductCard key={p.sku} product={p} ar={ar} />
+                      <ProductCard key={p.sku} product={p} ar={ar} country={country} />
                     ))}
                   </div>
                 ) : null}

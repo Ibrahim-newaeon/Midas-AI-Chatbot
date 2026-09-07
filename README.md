@@ -40,7 +40,7 @@ Optional `env.example` values:
 - Chat UI follows `design-system.xml` (Nord, Playfair Display, Noto Kufi Arabic, Magento buttons and prices)
 - “What’s on offer?” reads live Magento sale categories — not a keyword search for the word “offers”
 - Majlis queries search seating, not dining
-- Pasted `midasfurniture.com` product links **load that piece**: exact Magento `url_key` lookup (one SKU, this store’s price), not a keyword search of the slug
+- Pasted `midasfurniture.com` product links **load that piece**: exact Magento `url_key` lookup, then identity copy (`LONDER Bedroom Set, SKU 154534, 495 KWD…`), a grounded FOMO line, and Add to cart
 - No invented SKUs, no AR, no cross-country stock
 
 ## Key files
