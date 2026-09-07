@@ -411,6 +411,7 @@ export function ChatWidget({
                   className={`whitespace-pre-line rounded-[10px] px-3 py-2 text-[14px] leading-relaxed ${
                     m.role === "user" ? "bg-ink text-on-ink" : "bg-surface-off text-ink"
                   }`}
+                  data-testid={m.role === "assistant" ? "chat-assistant-message" : "chat-user-message"}
                 >
                   {m.imagePreview ? (
                     // eslint-disable-next-line @next/next/no-img-element
