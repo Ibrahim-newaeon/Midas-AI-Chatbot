@@ -4,6 +4,8 @@ Source of truth: **Combined System v1.1** (`docs/combined-system-v1.1.md`). Webs
 
 The live checklist (**Done / Partial / Not implemented / Waiting on live**) lives in the [README](../README.md#checklist-done--partial--not-implemented--waiting-on-live). Keep that table in sync when we ship extras (paste-a-link, UTM, widget, mirror catalog, hybrid/eval/memory).
 
+Open gaps vs the original Phase 1 website prompt: **[docs/todo.md](todo.md)**. Treat that list as the working backlog until each box is Done or explicitly out of scope.
+
 ## Quality loop (this slice)
 
 ```bash
