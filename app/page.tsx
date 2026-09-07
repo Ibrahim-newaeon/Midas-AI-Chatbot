@@ -1,4 +1,4 @@
-import { ChatWidget } from "@/components/chat-widget";
+import { MidasAiWidget } from "@/components/midas-ai-widget";
 
 const LOGO = "https://midasfurniture.com/media/logo/stores/1/logo_1.svg";
 
@@ -36,9 +36,22 @@ export default function Home() {
           Kuwait English demo
         </a>
       </p>
-      <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col bg-surface-off px-0 sm:px-4 sm:py-6">
-        <ChatWidget />
+      <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-8 px-4 py-10">
+        <div className="max-w-2xl space-y-3">
+          <p className="font-display text-[36px] leading-tight text-ink">Midas AI</p>
+          <p className="text-[15px] text-text-muted">
+            Official shopping assistant for Midas Furniture. Tap Try Midas AI (bottom corner on desktop, full screen
+            on a phone) and ask in English or Arabic. Prices follow the store you pick — never converted.
+          </p>
+          <p className="text-[14px]">
+            <a href="/demo" className="font-semibold underline">
+              Open the Magento mirror
+            </a>
+            {" to rehearse the widget on demo storefronts before it sits on live Magento."}
+          </p>
+        </div>
       </main>
+      <MidasAiWidget />
     </div>
   );
 }

@@ -50,9 +50,11 @@ Demo **Add to cart** on a PDP stores a local cart (`/{store}/cart`). It does not
 
 ## What is implemented
 
+- **Website widget** — floating launcher on desktop (corner panel) and full-screen on mobile (`Try Midas AI`). Magento drop-in: `/widget/midas-ai.js` → iframe `/embed`
 - Store-aware session (`en`, `ar`, `qtr_en`, `ksa_ar`, …) with KWD / QAR / SAR / JOD / BHD
 - Runtime prompt is **Part A** of Combined System v1.1 (`prompts/midas-ai-website-system.md`). Full spec: `docs/combined-system-v1.1.md`
 - Tools: `search_catalog`, `get_product`, `check_stock`, `get_policy`, `get_current_promotions`
+- Query understanding: budget (`under 300`), colour/material, follow-up turns, bare numeric SKU identity
 - Arabic query normalization + Arabizi lexicon before Magento search (middleware fallback; Magento ES analyzer not changed)
 - Send-gate verifier: UI SKUs and spoken prices must match this turn’s Magento facts
 - **Knowledge pack** in `knowledge/<country>/en.md` and `ar.md` — showrooms, hours, customer care, complaints (editable markdown, not Magento)
@@ -61,6 +63,7 @@ Demo **Add to cart** on a PDP stores a local cart (`/{store}/cart`). It does not
 - Majlis queries search seating, not dining
 - Pasted `midasfurniture.com` product links **load that piece**: exact Magento `url_key` lookup, then identity copy (`LONDER Bedroom Set, SKU 154534, 495 KWD…`), a grounded FOMO line, and Add to cart
 - **Magento mirror** at `/demo` and `/{store}/` — EN+AR storefronts, fixture catalog, local demo cart. `/` still uses live Magento.
+- JSON-LD `Product`/`Offer` on mirror PDPs (per store currency). Client `dataLayer` events: `chat_open`, `chat_first_message`, `chat_product_shown`, `chat_add_to_cart`, `chat_handoff_human`
 
 ## Key files
 
@@ -73,11 +76,19 @@ Demo **Add to cart** on a PDP stores a local cart (`/{store}/cart`). It does not
 | `lib/magento.ts` | GraphQL client + `Store` header |
 | `lib/tools.ts` | Middleware tools |
 | `app/api/chat/route.ts` | Orchestrator endpoint |
-| `components/chat-widget.tsx` | Website widget |
+| `components/midas-ai-widget.tsx` | Floating desktop/mobile launcher |
+| `components/chat-widget.tsx` | Chat panel |
+| `public/widget/midas-ai.js` | Magento script tag (iframe `/embed`) |
+| `widget/resolve-session.js` | Session helper (also inlined in `midas-ai.js`) |
 | `docs/middleware-api.md` | Tool contracts |
 | `docs/session-injection.md` | Magento URL / cookie session |
-| `widget/resolve-session.js` | Storefront helper to drop into Magento later |
 
-## Magento embed (next)
+## Magento embed
 
-On the Magento theme, read `BASE_URL`, POST `/api/chat` with `session` from `widget/resolve-session.js`. See `docs/session-injection.md`.
+On the Magento theme, add one script (after `BASE_URL` is printed):
+
+```html
+<script src="https://YOUR_MIDAS_AI_HOST/widget/midas-ai.js" async></script>
+```
+
+That script reads `BASE_URL` / the store cookie, opens an iframe to `/embed`, and posts `midas:add_to_cart` to the parent when a shopper taps Add to cart. Session JSON is documented in `docs/session-injection.md`. Live Magento cart cookies cannot be set from this app’s origin — the parent theme should listen for that message (or the shopper is sent to the PDP).

@@ -2,6 +2,7 @@ import { readFile } from "fs/promises";
 import path from "path";
 import { identityReply, pieceHeadline } from "@/lib/productCopy";
 import { parseMidasProductUrl } from "@/lib/productLink";
+import { extractConstraints, lastSpokenSku, redactPii, toSearchInput } from "@/lib/queryUnderstanding";
 import { CURRENCY_AR, STORE_MAP, WEBSITE_NAME, type SessionContext } from "@/lib/stores";
 import { getCurrentPromotions, getPolicy, getProduct, getProductByUrlKey, searchCatalog, searchOnSale, visualSearch } from "@/lib/tools";
 import type { AssistantTurn, ChatMessage, ProductCta, ProductDto, UiPayload } from "@/lib/types";
@@ -112,10 +113,11 @@ export async function runRulesOrchestrator(input: {
   image_data_url?: string | null;
 }): Promise<AssistantTurn> {
   const session = input.session;
-  const last = [...input.messages].reverse().find((m) => m.role === "user")?.content?.trim() || "";
+  const last = redactPii([...input.messages].reverse().find((m) => m.role === "user")?.content?.trim() || "");
   const lang = replyLanguage(session, last);
   const country = WEBSITE_NAME[session.website][lang];
   const used: string[] = [];
+  const constraints = extractConstraints(input.messages);
 
   if (INJECTION_RE.test(last)) {
     used.push("get_current_promotions");
@@ -238,7 +240,7 @@ export async function runRulesOrchestrator(input: {
 
   if (OFFERS_RE.test(last)) {
     used.push("get_current_promotions");
-    const extra = catalogQuery(last)
+    const extra = constraints.query
       .replace(OFFERS_RE, " ")
       .replace(/\b(what|whats|which|current|available|today|week|the|any|some|do|you|have|please|show|me|on)\b/gi, " ")
       .replace(/\s+/g, " ")
@@ -291,9 +293,8 @@ export async function runRulesOrchestrator(input: {
     }
   }
 
-  const skuMatch = last.match(SKU_RE);
-  const sku = session.page_sku || skuMatch?.[1];
-  if (sku && (session.page_sku || /sku|stock|متوفر|سعر|price/i.test(last))) {
+  const sku = constraints.sku || session.page_sku || lastSpokenSku(input.messages);
+  if (sku && (session.page_sku || constraints.sku || constraints.addToCart || /sku|stock|متوفر|سعر|price/i.test(last))) {
     used.push("get_product");
     const found = await getProduct(session.store_code, sku);
     if (!found.ok) {
@@ -336,14 +337,10 @@ export async function runRulesOrchestrator(input: {
 
   const kwdTrap = /kwd|د\.ك|kuwait price|سعر الكويت/i.test(last) && session.website !== "kuwait";
   used.push("search_catalog");
-  const query = catalogQuery(last) || last || visionQuery || "furniture";
+  const query = constraints.query || last || visionQuery || "furniture";
   const result = await searchCatalog({
-    store_code: session.store_code,
-    query,
-    room: /majlis|مجلس|ديوان/i.test(last) ? "majlis" : null,
-    brand: /kare|كاري/i.test(last) ? "Kare" : /ashley|آشلي|اشلي/i.test(last) ? "Ashley" : null,
-    in_stock_only: true,
-    page_size: 3,
+    ...toSearchInput(session.store_code, { ...constraints, query }),
+    page_size: 8,
   });
 
   if (!result.ok) {
@@ -384,11 +381,18 @@ export async function runRulesOrchestrator(input: {
         ? "For a small majlis I am showing seating, not dining tables. "
         : "";
 
+  const budgetNote =
+    constraints.max_price != null
+      ? lang === "ar"
+        ? ` ضمن ميزانية ${constraints.max_price} ${session.currency}.`
+        : ` within ${constraints.max_price} ${session.currency}.`
+      : "";
+
   const first = result.products[0];
   const message =
     lang === "ar"
-      ? `${trap}${majlisNote}هذه قطع متوفرة في ${country}. مثال: ${first.name} بسعر ${money(first, "ar")}. هل تفضّل أن أضيّق البحث حسب المقاس أو الميزانية؟`
-      : `${trap}${majlisNote}In-stock in ${country}. One option is ${first.name} at ${money(first, "en")}. Shall I narrow by size or budget?`;
+      ? `${trap}${majlisNote}هذه قطع متوفرة في ${country}.${budgetNote} مثال: ${first.name} بسعر ${money(first, "ar")}. هل تفضّل أن أضيّق البحث حسب المقاس أو اللون؟`
+      : `${trap}${majlisNote}In-stock in ${country}.${budgetNote} One option is ${first.name} at ${money(first, "en")}. Shall I narrow by size or colour?`;
 
   return { message, ui: cards(result.products, ["view"], lang), used_tools: used, engine: "rules" };
 }

@@ -144,3 +144,13 @@ The Magento store switcher reloads the page (`/en/` → `/qtr_ar/`). On reload, 
 ## 6. If `store_code` cannot be resolved
 
 The prompt already says: ask which country, and do not quote prices. The widget should still send `store_code: null` rather than defaulting to Kuwait.
+
+## 7. Magento theme embed
+
+Drop this on the Magento theme (after `var BASE_URL`):
+
+```html
+<script src="https://YOUR_MIDAS_AI_HOST/widget/midas-ai.js" async></script>
+```
+
+The script resolves session the same way as `resolveMidasSession()`, then iframes `/embed?store=<code>`. Listen for `message` events with `type: "midas:add_to_cart"` if you want the tap to hit the real Magento cart.

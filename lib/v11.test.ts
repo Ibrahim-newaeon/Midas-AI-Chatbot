@@ -6,6 +6,7 @@ import { fileURLToPath } from "node:url";
 import { expandArabiziLexicon, expandSearchQueries, normalizeArabic } from "./arabicNormalize.ts";
 import { fomoLine, identityReply, pieceHeadline } from "./productCopy.ts";
 import { parseMidasProductUrl } from "./productLink.ts";
+import { extractConstraints, parseBudget, redactPii } from "./queryUnderstanding.ts";
 import { verifySendGate, type ProductTruth } from "./verifier.ts";
 
 const catalogSrc = readFileSync(join(dirname(fileURLToPath(import.meta.url)), "mirrorCatalog.ts"), "utf8");
@@ -214,4 +215,27 @@ test("identity reply includes SKU, sale price, FOMO, and add to cart", () => {
   assert.match(text, /50% off/);
   assert.match(text, /Add to cart\?/);
   assert.ok(fomoLine(londer, "Kuwait", "en")?.includes("50%"));
+});
+
+test("budget parser reads under-N without converting currency", () => {
+  assert.equal(parseBudget("sofa under 300 KWD"), 300);
+  assert.equal(parseBudget("أقل من 500"), 500);
+});
+
+test("bare numeric SKU is identity, follow-up keeps prior query and budget", () => {
+  const bare = extractConstraints([{ role: "user", content: "154534" }]);
+  assert.equal(bare.sku, "154534");
+  const follow = extractConstraints([
+    { role: "user", content: "velvet sofa" },
+    { role: "assistant", content: "In-stock in Kuwait." },
+    { role: "user", content: "under 800 KWD" },
+  ]);
+  assert.equal(follow.max_price, 800);
+  assert.equal(follow.followUp, true);
+  assert.match(follow.query, /velvet sofa/i);
+});
+
+test("PII is redacted before catalog search text", () => {
+  assert.match(redactPii("call me at +965 12345678 or a@b.com"), /\[phone\]/);
+  assert.match(redactPii("call me at +965 12345678 or a@b.com"), /\[email\]/);
 });

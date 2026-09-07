@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { MirrorAddToCart } from "@/components/mirror-add-to-cart";
 import { MirrorDepartmentView } from "@/components/mirror-department-view";
+import { ProductJsonLd } from "@/components/product-json-ld";
 import { findByUrlKey, isMirrorNavSlug, MIRROR_NAV_SLUGS, MIRROR_PRODUCTS } from "@/lib/mirrorCatalog";
 import { CURRENCY_AR, isStoreCode, sessionFromStoreCode, STORE_CODES } from "@/lib/stores";
 
@@ -30,7 +31,9 @@ export default async function MirrorSlugPage({
   const inStock = price.stock === "IN_STOCK";
 
   return (
-    <article
+    <>
+      <ProductJsonLd product={product} session={session} />
+      <article
       className="grid gap-8 md:grid-cols-2"
       data-product-sku={product.sku}
       data-testid="mirror-pdp"
@@ -72,5 +75,6 @@ export default async function MirrorSlugPage({
         <MirrorAddToCart store={store} sku={product.sku} inStock={inStock} ar={ar} />
       </div>
     </article>
+    </>
   );
 }

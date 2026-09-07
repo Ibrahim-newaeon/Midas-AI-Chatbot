@@ -4,20 +4,44 @@ import { sessionFromStoreCode } from "@/lib/stores";
 import { ChatRequestSchema } from "@/lib/schemas";
 import { safeRefusal, toTruth, verifySendGate } from "@/lib/verifier";
 import { runWithCatalog } from "@/lib/catalogContext";
+import { rateLimit } from "@/lib/rateLimit";
 
 export const runtime = "nodejs";
 
+const ALLOW_ORIGIN = process.env.WIDGET_ORIGIN ?? "https://midasfurniture.com";
+
+function corsHeaders() {
+  return {
+    "Access-Control-Allow-Origin": ALLOW_ORIGIN,
+    "Access-Control-Allow-Methods": "POST, OPTIONS",
+    "Access-Control-Allow-Headers": "Content-Type",
+  };
+}
+
+export async function OPTIONS() {
+  return new NextResponse(null, { status: 204, headers: corsHeaders() });
+}
+
 export async function POST(req: Request) {
+  const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "local";
+  const limited = rateLimit(`chat:${ip}`);
+  if (!limited.ok) {
+    return NextResponse.json(
+      { ok: false, error: "rate_limited" },
+      { status: 429, headers: { ...corsHeaders(), "Retry-After": String(limited.retryAfter) } },
+    );
+  }
+
   let json: unknown;
   try {
     json = await req.json();
   } catch {
-    return NextResponse.json({ ok: false, error: "INVALID_INPUT" }, { status: 400 });
+    return NextResponse.json({ ok: false, error: "INVALID_INPUT" }, { status: 400, headers: corsHeaders() });
   }
 
   const parsed = ChatRequestSchema.safeParse(json);
   if (!parsed.success) {
-    return NextResponse.json({ ok: false, error: "INVALID_INPUT" }, { status: 400 });
+    return NextResponse.json({ ok: false, error: "INVALID_INPUT" }, { status: 400, headers: corsHeaders() });
   }
 
   const body = parsed.data;
@@ -31,7 +55,7 @@ export async function POST(req: Request) {
 
   const messages = body.messages.filter((m) => m.content.length > 0).slice(-12);
   if (!messages.length && !body.image_data_url) {
-    return NextResponse.json({ ok: false, error: "empty_message" }, { status: 400 });
+    return NextResponse.json({ ok: false, error: "empty_message" }, { status: 400, headers: corsHeaders() });
   }
 
   try {
@@ -46,20 +70,23 @@ export async function POST(req: Request) {
     const gate = verifySendGate(turn, facts, session.store_code);
     if (!gate.ok) {
       const refusal = safeRefusal(session.language);
-      return NextResponse.json({
-        ok: true,
-        session,
-        ...turn,
-        ...refusal,
-        used_tools: [...turn.used_tools, "send_gate"],
-        gate: gate.reason,
-      });
+      return NextResponse.json(
+        {
+          ok: true,
+          session,
+          ...turn,
+          ...refusal,
+          used_tools: [...turn.used_tools, "send_gate"],
+          gate: gate.reason,
+        },
+        { headers: corsHeaders() },
+      );
     }
-    return NextResponse.json({ ok: true, session, ...turn });
+    return NextResponse.json({ ok: true, session, ...turn }, { headers: corsHeaders() });
   } catch (err) {
     return NextResponse.json(
       { ok: false, error: "ASSISTANT_UNAVAILABLE", detail: err instanceof Error ? err.message : "unknown" },
-      { status: 500 },
+      { status: 500, headers: corsHeaders() },
     );
   }
 }

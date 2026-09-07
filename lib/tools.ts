@@ -60,7 +60,7 @@ export async function searchCatalog(
   const search = queries.join(" ");
   try {
     const majlis = isMajlisQuery(input.query, input.room);
-    const batches = await Promise.all(queries.map((query) => searchMagento(store, query, 8)));
+    const batches = await Promise.all(queries.map((query) => searchMagento(store, query, 12)));
     const seen = new Set<string>();
     const raw = [];
     for (const batch of batches) {
@@ -82,6 +82,16 @@ export async function searchCatalog(
       const b = input.brand.toLowerCase();
       const branded = products.filter((p) => (p.brand ?? "").toLowerCase().includes(b) || p.categories.join(" ").toLowerCase().includes(b));
       if (branded.length) products = branded;
+    }
+    if (input.color) {
+      const c = input.color.toLowerCase();
+      const colored = products.filter((p) => `${p.name} ${p.color ?? ""} ${p.categories.join(" ")}`.toLowerCase().includes(c));
+      if (colored.length) products = colored;
+    }
+    if (input.material) {
+      const m = input.material.toLowerCase();
+      const matted = products.filter((p) => `${p.name} ${p.material ?? ""} ${p.categories.join(" ")}`.toLowerCase().includes(m));
+      if (matted.length) products = matted;
     }
     if (isMajlisQuery(input.query, input.room)) {
       const seating = products.filter((p) => !/dining|طعام|سفرة/i.test([p.name, ...p.categories].join(" ")));

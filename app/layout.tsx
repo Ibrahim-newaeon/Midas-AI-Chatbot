@@ -24,6 +24,12 @@ export const metadata: Metadata = {
     "Phase 1 website widget for Midas Furniture. Live Magento catalog across Kuwait, Qatar, KSA, Jordan, and Bahrain.",
 };
 
+export const viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover" as const,
+};
+
 export default function RootLayout({
   children,
 }: Readonly<{

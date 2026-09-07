@@ -1,10 +1,12 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ImagePlus, Loader2, Send } from "lucide-react";
+import { ImagePlus, Loader2, Send, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Textarea } from "@/components/ui/textarea";
+import { readMirrorCart, writeMirrorCart } from "@/components/mirror-add-to-cart";
+import { trackChat } from "@/lib/analytics";
 import { fomoLine, pieceHeadline } from "@/lib/productCopy";
 import { STORE_CODES, STORE_LABELS, WEBSITE_NAME, sessionFromStoreCode, type StoreCode } from "@/lib/stores";
 import type { AssistantTurn, ChatMessage, ProductCta, ProductDto } from "@/lib/types";
@@ -33,11 +35,13 @@ function ProductCard({
   ar,
   country,
   sameOrigin = false,
+  onAddToCart,
 }: {
   product: ProductDto & { title?: string; ctas?: ProductCta[] };
   ar: boolean;
   country: string;
   sameOrigin?: boolean;
+  onAddToCart?: (product: ProductDto) => void;
 }) {
   const price = formatPrice(product, ar);
   const lang = ar ? "ar" : "en";
@@ -47,13 +51,17 @@ function ProductCard({
   const extraLink = sameOrigin ? {} : { target: "_blank" as const, rel: "noreferrer" };
   return (
     <article className="midas-card" data-testid={`product-card-${product.sku}`}>
-      <a href={product.pdp_url} {...extraLink} className="block">
-        <div className="relative aspect-[4/3] max-h-52 bg-surface-muted">
+      <a
+        href={product.pdp_url}
+        {...extraLink}
+        className="block"
+        onClick={() => trackChat("chat_product_click", { sku: product.sku })}
+      >
+        <div className="relative aspect-[4/3] max-h-44 bg-surface-muted">
           {product.discount_percent ? (
             <span className="midas-sale-badge absolute start-0 top-0 z-10">{product.discount_percent}%</span>
           ) : null}
           {product.image_url ? (
-            // Magento URLs include query params; native img is more reliable here.
             // eslint-disable-next-line @next/next/no-img-element
             <img src={product.image_url} alt={title} className="h-full w-full object-contain p-3" />
           ) : (
@@ -64,7 +72,7 @@ function ProductCard({
           {product.brand ? (
             <p className="text-[12px] tracking-[0.03em] text-text-muted uppercase">{product.brand}</p>
           ) : null}
-          <p className="text-[16px] leading-snug font-semibold text-ink">{title}</p>
+          <p className="text-[15px] leading-snug font-semibold text-ink">{title}</p>
           <p className="text-[13px] font-semibold text-ink" dir="ltr" data-testid="product-sku">
             SKU {product.sku}
           </p>
@@ -87,17 +95,29 @@ function ProductCard({
       ) : null}
       <div className="space-y-2 px-3 pb-3">
         {canCart ? (
-          <a
-            href={product.pdp_url}
-            {...extraLink}
-            className="midas-btn-pill-ink"
-            data-testid="product-add-to-cart"
-            aria-label={ar ? "أضف إلى السلة" : "Add to cart"}
-          >
-            {ar ? "أضف إلى السلة" : "Add to cart"}
-          </a>
+          onAddToCart ? (
+            <button
+              type="button"
+              className="midas-btn-pill-ink min-h-14"
+              data-testid="product-add-to-cart"
+              aria-label={ar ? "أضف إلى السلة" : "Add to cart"}
+              onClick={() => onAddToCart(product)}
+            >
+              {ar ? "أضف إلى السلة" : "Add to cart"}
+            </button>
+          ) : (
+            <a
+              href={product.pdp_url}
+              {...extraLink}
+              className="midas-btn-pill-ink min-h-14"
+              data-testid="product-add-to-cart"
+              aria-label={ar ? "أضف إلى السلة" : "Add to cart"}
+            >
+              {ar ? "أضف إلى السلة" : "Add to cart"}
+            </a>
+          )
         ) : null}
-        <a href={product.pdp_url} {...extraLink} className="block text-center text-[13px] font-semibold text-ink underline">
+        <a href={product.pdp_url} {...extraLink} className="block min-h-11 py-2 text-center text-[13px] font-semibold text-ink underline">
           {ar ? "عرض المنتج" : "View product"}
         </a>
       </div>
@@ -109,10 +129,14 @@ export function ChatWidget({
   lockedStore,
   pageSku: pageSkuProp = null,
   catalog = "live",
+  variant = "page",
+  onClose,
 }: {
   lockedStore?: StoreCode;
   pageSku?: string | null;
   catalog?: "live" | "mirror";
+  variant?: "page" | "dock";
+  onClose?: () => void;
 } = {}) {
   const [store, setStore] = useState<StoreCode>(lockedStore ?? "en");
   const [detectedSku, setDetectedSku] = useState<string | null>(null);
@@ -120,11 +144,15 @@ export function ChatWidget({
   const [image, setImage] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [cartNote, setCartNote] = useState<string | null>(null);
   const [messages, setMessages] = useState<Bubble[]>([]);
   const [featured, setFeatured] = useState<ProductDto[]>([]);
   const fileRef = useRef<HTMLInputElement>(null);
   const pendingRef = useRef(false);
   const messagesRef = useRef<Bubble[]>([]);
+  const sentFirst = useRef(false);
+  const bottomRef = useRef<HTMLDivElement>(null);
+  const dock = variant === "dock";
 
   const pageSku = pageSkuProp ?? detectedSku;
   const session = useMemo(
@@ -155,7 +183,7 @@ export function ChatWidget({
     fetch(`/api/offers?store=${store}&catalog=${catalog}`)
       .then((res) => res.json())
       .then((json) => {
-        if (!cancelled && json.ok) setFeatured(json.products ?? []);
+        if (!cancelled && json.ok) setFeatured((json.products ?? []).slice(0, dock ? 2 : 3));
       })
       .catch(() => {
         if (!cancelled) setFeatured([]);
@@ -163,7 +191,29 @@ export function ChatWidget({
     return () => {
       cancelled = true;
     };
-  }, [store, catalog]);
+  }, [store, catalog, dock]);
+
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ block: "end" });
+  }, [messages, pending]);
+
+  function addToCart(product: ProductDto) {
+    trackChat("chat_add_to_cart", { sku: product.sku, store_code: store, chat_session_id: chatSessionId.current });
+    if (catalog === "mirror") {
+      const items = readMirrorCart(store);
+      const hit = items.find((i) => i.sku === product.sku);
+      if (hit) hit.qty += 1;
+      else items.push({ sku: product.sku, qty: 1 });
+      writeMirrorCart(store, items);
+      setCartNote(ar ? "أُضيف إلى سلة التجربة (ليست سلة ميداس الحية)." : "Added to the demo cart (not the live Midas cart).");
+      return;
+    }
+    window.parent?.postMessage(
+      { type: "midas:add_to_cart", sku: product.sku, qty: 1, pdp_url: product.pdp_url, store_code: store },
+      "*",
+    );
+    window.open(product.pdp_url, "_blank", "noopener");
+  }
 
   async function send(text: string, dataUrl = image) {
     const content = text.trim();
@@ -171,7 +221,12 @@ export function ChatWidget({
     if (pendingRef.current) return;
     pendingRef.current = true;
     setError(null);
+    setCartNote(null);
     setPending(true);
+    if (!sentFirst.current) {
+      sentFirst.current = true;
+      trackChat("chat_first_message", { store_code: store, chat_session_id: chatSessionId.current });
+    }
     const userBubble: Bubble = {
       role: "user",
       content: content || (ar ? "صورة للبحث" : "Photo search"),
@@ -204,8 +259,13 @@ export function ChatWidget({
       const withReply = [...messagesRef.current, assistant];
       messagesRef.current = withReply;
       setMessages(withReply);
+      const skus = assistant.ui?.products?.map((p) => p.sku) ?? [];
+      if (skus.length) trackChat("chat_product_shown", { skus, store_code: store });
+      if (assistant.ui?.handoff?.show) trackChat("chat_handoff_human", { reason: assistant.ui.handoff.reason });
+      if (json.gate) trackChat("chat_unanswered", { reason: json.gate });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Chat failed");
+      trackChat("chat_unanswered", { reason: "request_failed" });
     } finally {
       pendingRef.current = false;
       setPending(false);
@@ -222,12 +282,16 @@ export function ChatWidget({
   return (
     <div
       dir={dir}
-      className="flex min-h-[min(760px,calc(100dvh-8rem))] flex-col overflow-hidden border-x-0 border-y border-line bg-page sm:rounded-[10px] sm:border"
+      className={`flex flex-col overflow-hidden bg-page ${
+        dock
+          ? "h-full min-h-0"
+          : "min-h-[min(760px,calc(100dvh-8rem))] border-x-0 border-y border-line sm:rounded-[10px] sm:border"
+      }`}
     >
-      <header className="flex flex-col gap-3 border-b border-line bg-page px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <p className="text-[21px] font-semibold text-ink">Midas AI</p>
-          <p className="text-[12px] text-text-muted">
+      <header className="flex shrink-0 items-center justify-between gap-3 border-b border-line bg-page px-4 py-3">
+        <div className="min-w-0">
+          <p className="text-[18px] font-semibold text-ink sm:text-[21px]">Midas AI</p>
+          <p className="truncate text-[11px] text-text-muted sm:text-[12px]">
             {ar
               ? catalog === "mirror"
                 ? "مساعد التسوق — كتالوج المرآة لهذه الدولة فقط"
@@ -237,43 +301,56 @@ export function ChatWidget({
                 : "Official shopping assistant — this store’s live catalog"}
           </p>
         </div>
-        {lockedStore ? (
-          <p className="text-[12px] font-semibold text-ink">{STORE_LABELS[store]}</p>
-        ) : (
-          <label className="text-[12px]">
-            <span className="mb-1 block tracking-[0.03em] text-text-muted uppercase">{ar ? "المتجر" : "Store"}</span>
-            <select
-              className="midas-input h-11 min-w-48 px-5"
-              value={store}
-              onChange={(e) => {
-                setStore(e.target.value as StoreCode);
-                messagesRef.current = [];
-                setMessages([]);
-              }}
+        <div className="flex shrink-0 items-center gap-1">
+          {lockedStore ? (
+            <p className="shrink-0 text-[11px] font-semibold text-ink sm:text-[12px]">{STORE_LABELS[store]}</p>
+          ) : (
+            <label className="shrink-0 text-[12px]">
+              <span className="sr-only">{ar ? "المتجر" : "Store"}</span>
+              <select
+                className="midas-input h-11 min-w-36 px-3 text-[12px]"
+                value={store}
+                onChange={(e) => {
+                  setStore(e.target.value as StoreCode);
+                  messagesRef.current = [];
+                  setMessages([]);
+                }}
+              >
+                {STORE_CODES.map((code) => (
+                  <option key={code} value={code}>
+                    {STORE_LABELS[code]}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
+          {onClose ? (
+            <button
+              type="button"
+              className="flex size-14 shrink-0 items-center justify-center text-ink"
+              data-testid="midas-ai-close"
+              aria-label={ar ? "إغلاق" : "Close chat"}
+              onClick={onClose}
             >
-              {STORE_CODES.map((code) => (
-                <option key={code} value={code}>
-                  {STORE_LABELS[code]}
-                </option>
-              ))}
-            </select>
-          </label>
-        )}
+              <X className="size-5" />
+            </button>
+          ) : null}
+        </div>
       </header>
 
-      <ScrollArea className="flex-1 bg-page">
-        <div className="space-y-4 p-4">
+      <ScrollArea className="min-h-0 flex-1 bg-page">
+        <div className="space-y-4 p-3 sm:p-4">
           {messages.length === 0 ? (
-            <div className="space-y-6 py-4">
-              <div className="space-y-3 text-center">
-                <p className="font-display text-[30px] leading-tight text-ink">
+            <div className="space-y-5 py-2">
+              <div className="space-y-2 text-center">
+                <p className={`font-display leading-tight text-ink ${dock ? "text-[22px]" : "text-[30px]"}`}>
                   {ar ? "لا تتنازل، أنت تستحق الأفضل" : "Don't compromise, you deserve the finest"}
                 </p>
                 <span className="mx-auto block h-1 w-8 bg-accent-gold" aria-hidden />
-                <p className="mx-auto max-w-xl text-[14px] text-text-muted">
+                <p className="mx-auto max-w-xl text-[13px] text-text-muted sm:text-[14px]">
                   {ar
-                    ? "اسأل عن العروض الحالية من فئات التخفيض في ماجنتو، أو غرفة، أو أرفق صورة."
-                    : "Ask about current Magento sale categories, a room, or attach a photo. Prices follow the country you select."}
+                    ? "اسأل عن العروض الحالية، أو غرفة، أو أرفق صورة."
+                    : "Ask about current sale categories, a room, or attach a photo."}
                 </p>
               </div>
               <div className="flex flex-wrap justify-center gap-2">
@@ -282,7 +359,7 @@ export function ChatWidget({
                     key={s}
                     type="button"
                     disabled={pending}
-                    className={`midas-btn-pill ${ar ? "tracking-normal" : "uppercase tracking-[0.03em]"}`}
+                    className={`midas-btn-pill min-h-11 text-[12px] sm:min-h-12 sm:text-[14px] ${ar ? "tracking-normal" : "uppercase tracking-[0.03em]"}`}
                     data-testid={`suggest-${s}`}
                     onClick={(e) => {
                       e.preventDefault();
@@ -299,9 +376,16 @@ export function ChatWidget({
                   <p className="text-center text-[12px] font-semibold tracking-[0.03em] text-accent-red uppercase">
                     {ar ? "عروض حية من الكتالوج" : "Live from this store’s sale categories"}
                   </p>
-                  <div className="grid gap-3 sm:grid-cols-3">
+                  <div className={`grid gap-3 ${dock ? "grid-cols-1" : "sm:grid-cols-3"}`}>
                     {featured.map((p) => (
-                      <ProductCard key={p.sku} product={p} ar={ar} country={country} sameOrigin={catalog === "mirror"} />
+                      <ProductCard
+                        key={p.sku}
+                        product={p}
+                        ar={ar}
+                        country={country}
+                        sameOrigin={catalog === "mirror"}
+                        onAddToCart={addToCart}
+                      />
                     ))}
                   </div>
                 </div>
@@ -324,15 +408,16 @@ export function ChatWidget({
                   {m.content}
                 </div>
                 {m.ui?.products?.length ? (
-                  <div
-                    className={
-                      m.ui.products.length === 1
-                        ? "max-w-sm"
-                        : "grid gap-3 sm:grid-cols-2 lg:grid-cols-3"
-                    }
-                  >
+                  <div className={dock || m.ui.products.length === 1 ? "max-w-sm" : "grid gap-3 sm:grid-cols-2"}>
                     {m.ui.products.map((p) => (
-                      <ProductCard key={p.sku} product={p} ar={ar} country={country} sameOrigin={catalog === "mirror"} />
+                      <ProductCard
+                        key={p.sku}
+                        product={p}
+                        ar={ar}
+                        country={country}
+                        sameOrigin={catalog === "mirror"}
+                        onAddToCart={addToCart}
+                      />
                     ))}
                   </div>
                 ) : null}
@@ -347,11 +432,13 @@ export function ChatWidget({
             </div>
           ) : null}
           {error ? <p className="text-[14px] text-accent-red">{error}</p> : null}
+          {cartNote ? <p className="text-[13px] text-text-muted">{cartNote}</p> : null}
+          <div ref={bottomRef} />
         </div>
       </ScrollArea>
 
       <form
-        className="border-t border-line bg-page p-3"
+        className="shrink-0 border-t border-line bg-page p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]"
         onSubmit={(e) => {
           e.preventDefault();
           void send(input);
@@ -361,7 +448,7 @@ export function ChatWidget({
           <div className="mb-2 flex items-center gap-2 text-[12px] text-text-muted">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={image} alt="" className="h-12 w-12 object-cover" />
-            <button type="button" className="underline" onClick={() => setImage(null)}>
+            <button type="button" className="min-h-11 underline" onClick={() => setImage(null)}>
               {ar ? "إزالة الصورة" : "Remove photo"}
             </button>
           </div>
@@ -374,14 +461,20 @@ export function ChatWidget({
             className="hidden"
             onChange={(e) => onPickFile(e.target.files?.[0])}
           />
-          <Button type="button" variant="outline" size="icon" onClick={() => fileRef.current?.click()} aria-label="Upload">
-            <ImagePlus className="size-4" />
+          <Button
+            type="button"
+            variant="outline"
+            className="size-14 shrink-0"
+            onClick={() => fileRef.current?.click()}
+            aria-label={ar ? "إرفاق صورة" : "Upload photo"}
+          >
+            <ImagePlus className="size-5" />
           </Button>
           <Textarea
             value={input}
             onChange={(e) => setInput(e.target.value)}
             placeholder={ar ? "اسأل عن غرفة، مقاس، أو أرفق صورة…" : "Ask about a room, size, or attach a photo…"}
-            className="midas-input min-h-11 max-h-32 flex-1 resize-none"
+            className="midas-input min-h-14 max-h-32 flex-1 resize-none py-3 text-[16px]"
             rows={1}
             onKeyDown={(e) => {
               if (e.key === "Enter" && !e.shiftKey) {
@@ -390,8 +483,8 @@ export function ChatWidget({
               }
             }}
           />
-          <Button type="submit" size="icon" disabled={pending} aria-label="Send" data-testid="chat-send">
-            <Send className="size-4" />
+          <Button type="submit" className="size-14 shrink-0" disabled={pending} aria-label={ar ? "إرسال" : "Send"} data-testid="chat-send">
+            <Send className="size-5" />
           </Button>
         </div>
       </form>

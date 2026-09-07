@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { ChatWidget } from "@/components/chat-widget";
+import { MidasAiWidget } from "@/components/midas-ai-widget";
 import {
   COUNTRY_EN_STORE,
   PAIR_STORE,
@@ -98,12 +98,8 @@ export function MirrorShell({
           ? "أسعار تجريبية حسب الدولة — اسأل ميداس AI عن العروض أو الصق رابط المنتج"
           : "Demo prices per country — ask Midas AI what’s on offer, or paste a product link"}
       </div>
-      <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-8 px-4 py-6">
-        {children}
-        <section data-testid="midas-ai-widget">
-          <ChatWidget lockedStore={store} catalog="mirror" />
-        </section>
-      </main>
+      <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-8 px-4 py-6">{children}</main>
+      <MidasAiWidget lockedStore={store} catalog="mirror" />
       <footer className="border-t border-line py-4 text-center text-[12px] text-text-muted">
         <a href="/demo" className="underline">
           {ar ? "كل متاجر المرآة" : "All mirror stores"}
