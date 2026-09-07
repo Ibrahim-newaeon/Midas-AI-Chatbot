@@ -26,6 +26,10 @@ export default function Home() {
         Holiday Sale is Here — live Magento prices. Ask Midas AI “What’s on offer?”
       </div>
       <p className="border-b border-line bg-surface-off py-2 text-center text-[13px]">
+        <a href="/brief" className="font-semibold underline">
+          Client brief
+        </a>
+        {" · "}
         <a href="/demo" className="font-semibold underline">
           Open the Magento mirror
         </a>

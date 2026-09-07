@@ -132,6 +132,8 @@ Source of truth: Combined System v1.1 (`docs/combined-system-v1.1.md`). Runtime 
 |---|---|
 | `prompts/midas-ai-website-system.md` | Part A runtime prompt (v1.1) |
 | `docs/combined-system-v1.1.md` | Full runtime + build spec |
+| `docs/Midas-AI-Client-Brief.md` | Client-facing preview brief (send with the preview link) |
+| `/brief` | Same brief as a branded page (Print / Save as PDF) |
 | `design-system.xml` | Extracted Magento theme tokens (Nord, Playfair, Noto Kufi, #121111 / #B22020 / #F5CD6F) |
 | `knowledge/<country>/*.md` | Editable FAQ: showrooms, hours, customer care, complaints |
 | `lib/magento.ts` | GraphQL client + `Store` header |

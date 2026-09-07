@@ -5,6 +5,15 @@ const WEBSITES: WebsiteId[] = ["kuwait", "qatar", "ksa", "jordan", "bahrain"];
 export default function DemoHub() {
   return (
     <div className="mx-auto max-w-3xl space-y-6 px-4 py-10">
+      <p className="text-[13px] text-text-muted">
+        <a className="underline" href="/brief">
+          Client brief
+        </a>
+        {" · "}
+        <a className="underline" href="/">
+          Kuwait live catalog
+        </a>
+      </p>
       <p className="font-display text-[36px] leading-tight text-ink">Magento mirror</p>
       <p className="text-[15px] text-text-muted">
         A rehearsal storefront for Midas AI. English and Arabic homes per country, with eight Living, Dining,
