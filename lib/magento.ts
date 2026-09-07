@@ -1,7 +1,8 @@
-import { currentCatalog } from "@/lib/catalogContext";
+import { currentCatalog, currentChannel } from "@/lib/catalogContext";
 import { executeMirrorGraphql } from "@/lib/mirrorGraphql";
 import { expandSearchQueries, isSeatingIntent } from "@/lib/arabicNormalize";
 import { pdpUrl, type SessionContext, type StoreCode, STORE_MAP } from "@/lib/stores";
+import { withMidasAiUtm } from "@/lib/utm";
 import type { ProductDto, StockStatus } from "@/lib/types";
 
 const GRAPHQL_URL =
@@ -99,7 +100,7 @@ export async function toProductDto(store: SessionContext, product: MagentoProduc
     brand: inferBrand(product),
     image_url: product.image?.url ?? null,
     url_key: product.url_key,
-    pdp_url: pdpUrl(store, product.url_key),
+    pdp_url: withMidasAiUtm(pdpUrl(store, product.url_key), store.channel),
     regular_price: regular,
     final_price: final,
     currency,
@@ -119,7 +120,7 @@ export function sessionFor(store_code: StoreCode): SessionContext {
     ...STORE_MAP[store_code],
     page_sku: null,
     customer_logged_in: false,
-    channel: "web",
+    channel: currentChannel(),
     chat_session_id: null,
     catalog: currentCatalog(),
   };

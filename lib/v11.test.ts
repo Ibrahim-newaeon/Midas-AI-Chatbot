@@ -7,6 +7,7 @@ import { expandArabiziLexicon, expandSearchQueries, normalizeArabic } from "./ar
 import { fomoLine, identityReply, pieceHeadline } from "./productCopy.ts";
 import { parseMidasProductUrl } from "./productLink.ts";
 import { extractConstraints, parseBudget, redactPii } from "./queryUnderstanding.ts";
+import { withMidasAiUtm } from "./utm.ts";
 import { verifySendGate, type ProductTruth } from "./verifier.ts";
 
 const catalogSrc = readFileSync(join(dirname(fileURLToPath(import.meta.url)), "mirrorCatalog.ts"), "utf8");
@@ -238,4 +239,27 @@ test("bare numeric SKU is identity, follow-up keeps prior query and budget", () 
 test("PII is redacted before catalog search text", () => {
   assert.match(redactPii("call me at +965 12345678 or a@b.com"), /\[phone\]/);
   assert.match(redactPii("call me at +965 12345678 or a@b.com"), /\[email\]/);
+});
+
+test("AI product links carry channel UTM", () => {
+  const live = "https://midasfurniture.com/en/londer-bedroom-set-king-size-193-203-cm-bedrooms-midas.html";
+  const widget = withMidasAiUtm(live, "widget");
+  const wa = withMidasAiUtm(live, "whatsapp");
+  const ig = withMidasAiUtm(live, "instagram");
+  assert.equal(
+    widget,
+    "https://midasfurniture.com/en/londer-bedroom-set-king-size-193-203-cm-bedrooms-midas.html?utm_source=Midas_AI&utm_medium=widget&utm_campaign=Chatbot",
+  );
+  assert.equal(
+    wa,
+    "https://midasfurniture.com/en/londer-bedroom-set-king-size-193-203-cm-bedrooms-midas.html?utm_source=Midas_AI&utm_medium=whatsapp&utm_campaign=Chatbot",
+  );
+  assert.equal(
+    ig,
+    "https://midasfurniture.com/en/londer-bedroom-set-king-size-193-203-cm-bedrooms-midas.html?utm_source=Midas_AI&utm_medium=Instagram&utm_campaign=Chatbot",
+  );
+  assert.equal(
+    withMidasAiUtm("/en/ovalo-velvet-sectional-sofa-7-pcs-white-living-room-midas.html", "web"),
+    "/en/ovalo-velvet-sectional-sofa-7-pcs-white-living-room-midas.html?utm_source=Midas_AI&utm_medium=widget&utm_campaign=Chatbot",
+  );
 });

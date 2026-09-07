@@ -17,6 +17,8 @@ export type WebsiteId = "kuwait" | "qatar" | "ksa" | "jordan" | "bahrain";
 
 export type CatalogSource = "live" | "mirror";
 
+export type ChatChannel = "web" | "widget" | "whatsapp" | "instagram";
+
 export type SessionContext = {
   store_code: StoreCode;
   website: WebsiteId;
@@ -26,7 +28,7 @@ export type SessionContext = {
   base_path: string;
   page_sku: string | null;
   customer_logged_in: boolean;
-  channel: "web";
+  channel: ChatChannel;
   chat_session_id: string | null;
   catalog: CatalogSource;
 };
@@ -85,14 +87,14 @@ export function isStoreCode(value: string | null | undefined): value is StoreCod
 
 export function sessionFromStoreCode(
   store_code: StoreCode,
-  extras?: Partial<Pick<SessionContext, "page_sku" | "customer_logged_in" | "chat_session_id" | "catalog">>,
+  extras?: Partial<Pick<SessionContext, "page_sku" | "customer_logged_in" | "chat_session_id" | "catalog" | "channel">>,
 ): SessionContext {
   return {
     store_code,
     ...STORE_MAP[store_code],
     page_sku: extras?.page_sku ?? null,
     customer_logged_in: extras?.customer_logged_in ?? false,
-    channel: "web",
+    channel: extras?.channel ?? "web",
     chat_session_id: extras?.chat_session_id ?? null,
     catalog: extras?.catalog ?? "live",
   };

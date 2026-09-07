@@ -46,11 +46,16 @@ export async function POST(req: Request) {
 
   const body = parsed.data;
   const catalog = body.session.catalog === "mirror" ? "mirror" : "live";
+  const channel =
+    body.session.channel === "whatsapp" || body.session.channel === "instagram"
+      ? body.session.channel
+      : "widget";
   const session = sessionFromStoreCode(body.session.store_code, {
     page_sku: body.session.page_sku ?? null,
     customer_logged_in: Boolean(body.session.customer_logged_in),
     chat_session_id: body.session.chat_session_id ?? null,
     catalog,
+    channel,
   });
 
   const messages = body.messages.filter((m) => m.content.length > 0).slice(-12);
@@ -59,12 +64,15 @@ export async function POST(req: Request) {
   }
 
   try {
-    const turn = await runWithCatalog(catalog, () =>
-      runChat({
-        session,
-        messages,
-        image_data_url: body.image_data_url,
-      }),
+    const turn = await runWithCatalog(
+      catalog,
+      () =>
+        runChat({
+          session,
+          messages,
+          image_data_url: body.image_data_url,
+        }),
+      channel,
     );
     const facts = (turn.ui.products ?? []).map((p) => toTruth(p, session.store_code));
     const gate = verifySendGate(turn, facts, session.store_code);

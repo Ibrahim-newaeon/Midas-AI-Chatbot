@@ -12,7 +12,7 @@ export async function GET(req: Request) {
   if (!isStoreCode(store)) {
     return NextResponse.json({ ok: false, error: "invalid_store" }, { status: 400 });
   }
-  const result = await runWithCatalog(catalog, () => searchOnSale(store, 3));
+  const result = await runWithCatalog(catalog, () => searchOnSale(store, 3), "widget");
   if (!result.ok) {
     return NextResponse.json({ ok: false, error: result.error, products: [] });
   }

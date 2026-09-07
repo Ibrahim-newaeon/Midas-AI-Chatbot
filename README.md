@@ -62,6 +62,7 @@ Demo **Add to cart** on a PDP stores a local cart (`/{store}/cart`). It does not
 - “What’s on offer?” reads live Magento sale categories — not a keyword search for the word “offers”
 - Majlis queries search seating, not dining
 - Pasted `midasfurniture.com` product links **load that piece**: exact Magento `url_key` lookup, then identity copy (`LONDER Bedroom Set, SKU 154534, 495 KWD…`), a grounded FOMO line, and Add to cart
+- Product links from the widget include `utm_source=Midas_AI&utm_medium=widget&utm_campaign=Chatbot` (WhatsApp / Instagram mediums are ready for those channels)
 - **Magento mirror** at `/demo` and `/{store}/` — EN+AR storefronts, fixture catalog, local demo cart. `/` still uses live Magento.
 - JSON-LD `Product`/`Offer` on mirror PDPs (per store currency). Client `dataLayer` events: `chat_open`, `chat_first_message`, `chat_product_shown`, `chat_add_to_cart`, `chat_handoff_human`
 

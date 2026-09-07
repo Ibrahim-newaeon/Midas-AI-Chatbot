@@ -8,6 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { readMirrorCart, writeMirrorCart } from "@/components/mirror-add-to-cart";
 import { trackChat } from "@/lib/analytics";
 import { fomoLine, pieceHeadline } from "@/lib/productCopy";
+import { withMidasAiUtm } from "@/lib/utm";
 import { STORE_CODES, STORE_LABELS, WEBSITE_NAME, sessionFromStoreCode, type StoreCode } from "@/lib/stores";
 import type { AssistantTurn, ChatMessage, ProductCta, ProductDto } from "@/lib/types";
 
@@ -36,23 +37,26 @@ function ProductCard({
   country,
   sameOrigin = false,
   onAddToCart,
+  channel = "widget",
 }: {
   product: ProductDto & { title?: string; ctas?: ProductCta[] };
   ar: boolean;
   country: string;
   sameOrigin?: boolean;
   onAddToCart?: (product: ProductDto) => void;
+  channel?: string;
 }) {
   const price = formatPrice(product, ar);
   const lang = ar ? "ar" : "en";
   const title = product.title ?? pieceHeadline(product, lang);
+  const href = withMidasAiUtm(product.pdp_url, channel);
   const canCart = product.stock_status === "IN_STOCK" && (product.ctas ? product.ctas.includes("add_to_cart") : true);
   const fomo = fomoLine(product, country, lang);
   const extraLink = sameOrigin ? {} : { target: "_blank" as const, rel: "noreferrer" };
   return (
     <article className="midas-card" data-testid={`product-card-${product.sku}`}>
       <a
-        href={product.pdp_url}
+        href={href}
         {...extraLink}
         className="block"
         onClick={() => trackChat("chat_product_click", { sku: product.sku })}
@@ -107,7 +111,7 @@ function ProductCard({
             </button>
           ) : (
             <a
-              href={product.pdp_url}
+              href={href}
               {...extraLink}
               className="midas-btn-pill-ink min-h-14"
               data-testid="product-add-to-cart"
@@ -117,7 +121,7 @@ function ProductCard({
             </a>
           )
         ) : null}
-        <a href={product.pdp_url} {...extraLink} className="block min-h-11 py-2 text-center text-[13px] font-semibold text-ink underline">
+        <a href={href} {...extraLink} className="block min-h-11 py-2 text-center text-[13px] font-semibold text-ink underline">
           {ar ? "عرض المنتج" : "View product"}
         </a>
       </div>
@@ -156,7 +160,7 @@ export function ChatWidget({
 
   const pageSku = pageSkuProp ?? detectedSku;
   const session = useMemo(
-    () => sessionFromStoreCode(store, { page_sku: pageSku, catalog }),
+    () => sessionFromStoreCode(store, { page_sku: pageSku, catalog, channel: "widget" }),
     [store, pageSku, catalog],
   );
   const ar = session.language === "ar";
@@ -208,11 +212,12 @@ export function ChatWidget({
       setCartNote(ar ? "أُضيف إلى سلة التجربة (ليست سلة ميداس الحية)." : "Added to the demo cart (not the live Midas cart).");
       return;
     }
+    const href = withMidasAiUtm(product.pdp_url, session.channel);
     window.parent?.postMessage(
-      { type: "midas:add_to_cart", sku: product.sku, qty: 1, pdp_url: product.pdp_url, store_code: store },
+      { type: "midas:add_to_cart", sku: product.sku, qty: 1, pdp_url: href, store_code: store },
       "*",
     );
-    window.open(product.pdp_url, "_blank", "noopener");
+    window.open(href, "_blank", "noopener");
   }
 
   async function send(text: string, dataUrl = image) {
@@ -242,7 +247,13 @@ export function ChatWidget({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          session: { ...session, chat_session_id: chatSessionId.current, catalog, page_sku: pageSku },
+          session: {
+            ...session,
+            chat_session_id: chatSessionId.current,
+            catalog,
+            page_sku: pageSku,
+            channel: "widget",
+          },
           messages: nextMessages.map(({ role, content }) => ({ role, content })),
           image_data_url: dataUrl,
         }),

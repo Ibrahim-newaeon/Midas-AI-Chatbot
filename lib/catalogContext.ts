@@ -1,12 +1,18 @@
 import { AsyncLocalStorage } from "node:async_hooks";
-import type { CatalogSource } from "./stores";
+import type { CatalogSource, ChatChannel } from "./stores";
 
-const als = new AsyncLocalStorage<CatalogSource>();
+type CatalogState = { catalog: CatalogSource; channel: ChatChannel };
 
-export function runWithCatalog<T>(catalog: CatalogSource, fn: () => T): T {
-  return als.run(catalog, fn);
+const als = new AsyncLocalStorage<CatalogState>();
+
+export function runWithCatalog<T>(catalog: CatalogSource, fn: () => T, channel: ChatChannel = "web"): T {
+  return als.run({ catalog, channel }, fn);
 }
 
 export function currentCatalog(): CatalogSource {
-  return als.getStore() ?? "live";
+  return als.getStore()?.catalog ?? "live";
+}
+
+export function currentChannel(): ChatChannel {
+  return als.getStore()?.channel ?? "web";
 }

@@ -33,7 +33,7 @@ Allowed: `en`, `ar`, `qtr_en`, `qtr_ar`, `ksa_en`, `ksa_ar`, `jo_en`, `jo_ar`, `
 }
 ```
 
-`pdp_url` = `https://midasfurniture.com` + session `base_path` + `url_key` + `.html`.
+`pdp_url` = `https://midasfurniture.com` + session `base_path` + `url_key` + `.html`, plus AI UTMs (`utm_source=Midas_AI`, `utm_campaign=Chatbot`, `utm_medium=widget|whatsapp|Instagram` from `channel`).
 
 On `Store: ar`, `name` and `categories` come back in Arabic from Magento. Do not translate in middleware.
 

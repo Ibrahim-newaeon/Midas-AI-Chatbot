@@ -11,6 +11,7 @@ export const ChatRequestSchema = z.object({
       customer_logged_in: z.boolean().optional(),
       chat_session_id: z.string().max(80).optional(),
       catalog: z.enum(["live", "mirror"]).optional(),
+      channel: z.enum(["web", "widget", "whatsapp", "instagram"]).optional(),
     })
     .passthrough(),
   messages: z
