@@ -12,12 +12,13 @@ Please open the preview first, then use this note as the walkthrough. It explain
 
 **https://temporary-instant-obsidian-e3mm1b0.vercel.app/**
 
+Send this URL with this brief. Click **Try Midas AI** (bottom corner on desktop; full screen on a phone). Chrome or Safari.
+
 | Open this | What you are reviewing |
 |---|---|
 | [Home — live Magento catalog](https://temporary-instant-obsidian-e3mm1b0.vercel.app/) | Real prices and stock from midasfurniture.com. Use the store menu (Kuwait, Qatar, KSA, Jordan, Bahrain · English / Arabic). |
 | [Kuwait English demo storefront](https://temporary-instant-obsidian-e3mm1b0.vercel.app/en/) | Safer first look. Same assistant rules, rehearsal catalog. |
 | [All country demos](https://temporary-instant-obsidian-e3mm1b0.vercel.app/demo) | Ten storefronts (5 countries × English + Arabic). |
-| [This brief in the app](https://temporary-instant-obsidian-e3mm1b0.vercel.app/brief) | Same document, branded page. Print or Save as PDF from the browser. |
 
 Click **Try Midas AI** (bottom corner on desktop; full screen on a phone). Chrome or Safari.
 
