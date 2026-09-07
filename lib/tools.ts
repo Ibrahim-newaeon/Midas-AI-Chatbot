@@ -2,6 +2,7 @@ import { getPolicyText, POLICY_TOPICS, type PolicyTopic } from "@/lib/policies";
 import {
   buildSearchText,
   getMagentoBySku,
+  getMagentoByUrlKey,
   isMajlisQuery,
   listSaleCategories,
   searchMagento,
@@ -183,6 +184,19 @@ export async function getCurrentPromotions(store_code: StoreCode) {
     campaigns: categories.map((c) => c.name),
     products: sale.ok ? sale.products : [],
   };
+}
+
+export async function getProductByUrlKey(store_code: StoreCode, url_key: string) {
+  if (!isStoreCode(store_code)) return badStore(store_code);
+  const store = sessionFor(store_code);
+  try {
+    const raw = await getMagentoByUrlKey(store, url_key.trim());
+    if (!raw) return { ok: false as const, error: "not_found" as const, url_key };
+    const product = await toProductDto(store, raw);
+    return { ok: true as const, store_code, currency: store.currency, product };
+  } catch (err) {
+    return { ok: false as const, error: "catalog_unavailable", detail: err instanceof Error ? err.message : "unknown" };
+  }
 }
 
 export async function getProduct(store_code: StoreCode, sku: string) {

@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { expandArabiziLexicon, expandSearchQueries, normalizeArabic } from "./arabicNormalize.ts";
+import { parseMidasProductUrl } from "./productLink.ts";
 import { verifySendGate, type ProductTruth } from "./verifier.ts";
 
 test("arabic hamza variants collapse", () => {
@@ -111,4 +112,28 @@ test("send-gate blocks KWD on Jordan session", () => {
     "jo_en",
   );
   assert.equal(v.ok, false);
+});
+
+test("pasted PDP link extracts url_key not size digits", () => {
+  const parsed = parseMidasProductUrl(
+    "what is this https://midasfurniture.com/en/londer-bedroom-set-king-size-193-203-cm-bedrooms-midas.html",
+  );
+  assert.ok(parsed);
+  assert.equal(parsed.store_code, "en");
+  assert.equal(parsed.url_key, "londer-bedroom-set-king-size-193-203-cm-bedrooms-midas");
+});
+
+test("Qatar store path on a pasted link is recorded", () => {
+  const parsed = parseMidasProductUrl(
+    "https://www.midasfurniture.com/qtr_en/londer-bedroom-set-king-size-193-203-cm-bedrooms-midas.html?utm=1",
+  );
+  assert.ok(parsed);
+  assert.equal(parsed.store_code, "qtr_en");
+  assert.equal(parsed.url_key, "londer-bedroom-set-king-size-193-203-cm-bedrooms-midas");
+});
+
+test("cart and homepage URLs are not treated as a piece", () => {
+  assert.equal(parseMidasProductUrl("https://midasfurniture.com/en/cart"), null);
+  assert.equal(parseMidasProductUrl("https://midasfurniture.com/en"), null);
+  assert.equal(parseMidasProductUrl("https://example.com/londer-bedroom-set.html"), null);
 });

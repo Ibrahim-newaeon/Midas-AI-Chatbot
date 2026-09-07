@@ -203,6 +203,19 @@ export async function searchMagentoByCategoryIds(
   return data.products.items ?? [];
 }
 
+export async function getMagentoByUrlKey(store: SessionContext, urlKey: string): Promise<MagentoProduct | null> {
+  const data = await magentoGraphql<{ products: { items: MagentoProduct[] } }>(
+    store.store_code,
+    `query ByUrl($key: String!) {
+      products(filter: { url_key: { eq: $key } }) {
+        items { ${PRODUCT_FIELDS} }
+      }
+    }`,
+    { key: urlKey },
+  );
+  return data.products.items?.[0] ?? null;
+}
+
 export async function getMagentoBySku(store: SessionContext, sku: string): Promise<MagentoProduct | null> {
   const data = await magentoGraphql<{ products: { items: MagentoProduct[] } }>(
     store.store_code,

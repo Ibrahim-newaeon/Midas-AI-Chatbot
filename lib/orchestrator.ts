@@ -1,7 +1,8 @@
 import { readFile } from "fs/promises";
 import path from "path";
-import { CURRENCY_AR, WEBSITE_NAME, type SessionContext } from "@/lib/stores";
-import { checkStock, getCurrentPromotions, getPolicy, getProduct, searchCatalog, searchOnSale, visualSearch } from "@/lib/tools";
+import { checkStock, getCurrentPromotions, getPolicy, getProduct, getProductByUrlKey, searchCatalog, searchOnSale, visualSearch } from "@/lib/tools";
+import { parseMidasProductUrl } from "@/lib/productLink";
+import { CURRENCY_AR, STORE_MAP, WEBSITE_NAME, type SessionContext } from "@/lib/stores";
 import type { AssistantTurn, ChatMessage, ProductCta, ProductDto, UiPayload } from "@/lib/types";
 
 const SKU_RE = /\b(\d{4,8})\b/;
@@ -24,6 +25,7 @@ const DISCOUNT_RE = /can you (do|give|make).{0,24}(\d+\s*%|discount)|special pri
 
 function catalogQuery(text: string) {
   return text
+    .replace(/https?:\/\/\S+/gi, " ")
     .replace(/i saw this in kuwait[^.?!]*/i, " ")
     .replace(/\d+([.,]\d+)?\s*(kwd|qar|sar|jod|bhd|د\.ك)/gi, " ")
     .replace(/same price\??/i, " ")
@@ -138,6 +140,57 @@ export async function runRulesOrchestrator(input: {
         ? `لا أتفاوض على السعر من الدردشة. خدمة العملاء تتابع الطلبات الخاصة. ${care.ok ? care.text : ""}`
         : `I cannot negotiate a price from this chat. Customer care handles special terms. ${care.ok ? care.text : ""}`;
     return { message, ui: emptyUi(true, "discount_request"), used_tools: used, engine: "rules" };
+  }
+
+  const pastedLink = parseMidasProductUrl(last);
+  if (pastedLink) {
+    used.push("get_product_by_url_key");
+    const found = await getProductByUrlKey(session.store_code, pastedLink.url_key);
+    const urlStore = pastedLink.store_code;
+    const crossStore = Boolean(urlStore && urlStore !== session.store_code);
+    const urlCountry =
+      urlStore && urlStore in STORE_MAP ? WEBSITE_NAME[STORE_MAP[urlStore].website][lang] : null;
+
+    if (!found.ok) {
+      const message =
+        lang === "ar"
+          ? crossStore && urlCountry
+            ? `هذا الرابط من موقع ${urlCountry}. لا أحوّل أسعار ${urlCountry} إلى ${session.currency}. ولم أجد هذه القطعة في كتالوج ${country}. لن أقترح بديلاً مشابهاً من الرابط.`
+            : `لم أجد قطعة ميداس مطابقة لهذا الرابط في متجر ${country}. لن أخمن قطعة مشابهة من اسم الرابط.`
+          : crossStore && urlCountry
+            ? `This link is from the ${urlCountry} website. I will not convert ${urlCountry} prices into ${session.currency}, and I could not find that piece in the ${country} catalog. I will not guess a similar item from the link.`
+            : `I could not find that Midas Furniture piece for this link in the ${country} store. I will not guess a similar item from the URL.`;
+      return { message, ui: emptyUi(), used_tools: used, engine: "rules" };
+    }
+
+    const p = found.product;
+    const stockLine =
+      p.stock_status === "IN_STOCK"
+        ? lang === "ar"
+          ? "متوفر الآن"
+          : "In stock"
+        : lang === "ar"
+          ? "غير متوفر في هذا المتجر"
+          : "Not in stock on this store";
+    const storeLock =
+      crossStore && urlCountry
+        ? lang === "ar"
+          ? `الرابط من موقع ${urlCountry}. السعر أدناه من متجر ${country} بـ ${session.currency} وليس تحويلاً. `
+          : `The link is from the ${urlCountry} website. The price below is the ${country} catalog in ${session.currency}, not a conversion. `
+        : "";
+    const message =
+      lang === "ar"
+        ? `${storeLock}هذه القطعة من الرابط: ${p.name} — ${money(p, "ar")}${p.regular_price > p.final_price ? ` (كان ${p.regular_price})` : ""}. ${stockLine} في ${country}.`
+        : `${storeLock}This is the piece from your link: ${p.name} is ${money(p, "en")}${p.regular_price > p.final_price ? ` (was ${p.regular_price} ${p.currency})` : ""}. ${stockLine} in ${country}.`;
+    return { message, ui: cards([p]), used_tools: used, engine: "rules" };
+  }
+
+  if (/https?:\/\//i.test(last) && !catalogQuery(last)) {
+    const message =
+      lang === "ar"
+        ? "أستطيع فتح روابط منتجات midasfurniture.com فقط. الصق رابط صفحة المنتج وسأحمّل تلك القطعة من الكتالوج."
+        : "I can only open product links from midasfurniture.com. Paste a product page link and I will load that exact piece from the catalog.";
+    return { message, ui: emptyUi(), used_tools: used, engine: "rules" };
   }
 
   if (COMPLAINT_RE.test(last) || ORDER_RE.test(last)) {
