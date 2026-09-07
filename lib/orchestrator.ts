@@ -173,7 +173,7 @@ export async function runRulesOrchestrator(input: {
         : "";
     return {
       message: identityReply({ product: p, country, lang, prefix: storeLock }),
-      ui: p.stock_status === "IN_STOCK" ? cards([p], ["view"], lang) : emptyUi(),
+      ui: cards([p], ["view"], lang),
       used_tools: used,
       engine: "rules",
     };
@@ -310,7 +310,7 @@ export async function runRulesOrchestrator(input: {
     const p = found.product;
     return {
       message: identityReply({ product: p, country, lang }),
-      ui: p.stock_status === "IN_STOCK" ? cards([p], ["view"], lang) : emptyUi(),
+      ui: cards([p], ["view"], lang),
       used_tools: used,
       engine: "rules",
     };

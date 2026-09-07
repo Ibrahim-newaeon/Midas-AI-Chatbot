@@ -71,7 +71,9 @@ export function verifySendGate(
     if (!f) return { ok: false, reason: `ungrounded_sku:${p.sku}` };
     if (p.currency !== f.currency) return { ok: false, reason: `currency_mismatch:${p.sku}` };
     if (p.final_price !== f.finalPrice) return { ok: false, reason: `price_mismatch:${p.sku}` };
-    if (f.stockStatus !== "IN_STOCK") return { ok: false, reason: `oos_shown:${p.sku}` };
+    if (f.stockStatus !== "IN_STOCK" && (p.ctas ?? []).includes("add_to_cart")) {
+      return { ok: false, reason: `oos_shown:${p.sku}` };
+    }
   }
 
   const allowed = new Set(scoped.flatMap((f) => [f.finalPrice, f.regularPrice]));

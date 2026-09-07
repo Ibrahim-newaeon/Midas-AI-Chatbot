@@ -103,16 +103,40 @@ test("send-gate allows grounded Kuwait price", () => {
   assert.equal(v.ok, true);
 });
 
-test("send-gate blocks KWD on Jordan session", () => {
+test("send-gate allows OOS identity without add_to_cart", () => {
   const v = verifySendGate(
     {
-      message: "This is 84 KWD.",
-      ui: { products: [], ctas: [], handoff: { show: false, reason: null } },
+      message: "LONDER Bedroom Set, SKU 154534, 189 JOD (was 355), not in stock in Jordan.",
+      ui: {
+        products: [
+          {
+            sku: "154534",
+            name: "LONDER",
+            title: "LONDER Bedroom Set",
+            brand: null,
+            image_url: null,
+            url_key: "londer",
+            pdp_url: "/jo_en/londer.html",
+            regular_price: 355,
+            final_price: 189,
+            currency: "JOD",
+            discount_percent: 47,
+            stock_status: "OUT_OF_STOCK",
+            categories: [],
+            color: null,
+            material: null,
+            dimensions: null,
+            ctas: ["view"],
+          },
+        ],
+        ctas: ["view"],
+        handoff: { show: false, reason: null },
+      },
     },
-    [fact({ storeCode: "jo_en", currency: "JOD", finalPrice: 84, regularPrice: 84, sku: "1" })],
+    [fact({ storeCode: "jo_en", currency: "JOD", finalPrice: 189, regularPrice: 355, stockStatus: "OUT_OF_STOCK" })],
     "jo_en",
   );
-  assert.equal(v.ok, false);
+  assert.equal(v.ok, true);
 });
 
 test("pasted PDP link extracts url_key not size digits", () => {
