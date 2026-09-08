@@ -22,6 +22,11 @@ const SUGGESTIONS: Record<"en" | "ar", string[]> = {
   ar: ["شنو العروض الحالية؟", "وين معرض الري؟", "عندي شكوى عن الطلب", "هل التوصيل مجاني؟"],
 };
 
+const IMPORT_SUGGESTIONS: Record<"en" | "ar", string[]> = {
+  en: ["Show me sofas", "What's in stock?", "I need a dining table", "Something in velvet"],
+  ar: ["ورني الكنب", "شنو المتوفر؟", "أحتاج طاولة طعام", "شي مخمل"],
+};
+
 function formatPrice(product: ProductDto, ar: boolean) {
   const n = product.final_price.toLocaleString("en-US", { maximumFractionDigits: 2 });
   const was = product.regular_price.toLocaleString("en-US", { maximumFractionDigits: 2 });
@@ -134,6 +139,8 @@ export function ChatWidget({
   pageSku: pageSkuProp = null,
   catalog = "live",
   tenantId = null,
+  clientName,
+  currency,
   variant = "page",
   onClose,
 }: {
@@ -141,6 +148,8 @@ export function ChatWidget({
   pageSku?: string | null;
   catalog?: "live" | "mirror" | "import";
   tenantId?: string | null;
+  clientName?: string;
+  currency?: string;
   variant?: "page" | "dock";
   onClose?: () => void;
 } = {}) {
@@ -315,19 +324,27 @@ export function ChatWidget({
           <p className="truncate text-[11px] text-text-muted sm:text-[12px]">
             {ar
               ? catalog === "import"
-                ? "مساعد التسوق — كتالوج العميل المستورد"
+                ? clientName
+                  ? `مساعد التسوق — ${clientName}`
+                  : "مساعد التسوق — كتالوج العميل المستورد"
                 : catalog === "mirror"
                   ? "مساعد التسوق — كتالوج المرآة لهذه الدولة فقط"
                   : "مساعد التسوق الرسمي — أسعار ومخزون هذا المتجر فقط"
               : catalog === "import"
-                ? "Shopping assistant — this client’s imported catalog"
+                ? clientName
+                  ? `Shopping assistant for ${clientName}`
+                  : "Shopping assistant — this client’s imported catalog"
                 : catalog === "mirror"
                   ? "Shopping assistant — this country’s demo catalog only"
                   : "Official shopping assistant — this store’s live catalog"}
           </p>
         </div>
         <div className="flex shrink-0 items-center gap-1">
-          {lockedStore ? (
+          {catalog === "import" ? (
+            <p className="shrink-0 text-[11px] font-semibold text-ink sm:text-[12px]">
+              {currency ?? (ar ? "كتالوج مستورد" : "Imported catalog")}
+            </p>
+          ) : lockedStore ? (
             <p className="shrink-0 text-[11px] font-semibold text-ink sm:text-[12px]">{STORE_LABELS[store]}</p>
           ) : (
             <label className="shrink-0 text-[12px]">
@@ -369,17 +386,27 @@ export function ChatWidget({
             <div className="space-y-5 py-2">
               <div className="space-y-2 text-center">
                 <p className={`font-display leading-tight text-ink ${dock ? "text-[22px]" : "text-[30px]"}`}>
-                  {ar ? "لا تتنازل، أنت تستحق الأفضل" : "Don't compromise, you deserve the finest"}
+                  {catalog === "import"
+                    ? ar
+                      ? "ما الذي تبحث عنه؟"
+                      : "What are you furnishing?"
+                    : ar
+                      ? "لا تتنازل، أنت تستحق الأفضل"
+                      : "Don't compromise, you deserve the finest"}
                 </p>
                 <span className="mx-auto block h-1 w-8 bg-accent-gold" aria-hidden />
                 <p className="mx-auto max-w-xl text-[13px] text-text-muted sm:text-[14px]">
-                  {ar
-                    ? "اسأل عن العروض الحالية، أو غرفة، أو أرفق صورة."
-                    : "Ask about current sale categories, a room, or attach a photo."}
+                  {catalog === "import"
+                    ? ar
+                      ? "اسأل عن قطعة، غرفة، أو أرفق صورة. الأسعار من الكتالوج المستورد."
+                      : "Ask about a piece, a room, or attach a photo. Prices come from this imported catalog."
+                    : ar
+                      ? "اسأل عن العروض الحالية، أو غرفة، أو أرفق صورة."
+                      : "Ask about current sale categories, a room, or attach a photo."}
                 </p>
               </div>
               <div className="flex flex-wrap justify-center gap-2">
-                {SUGGESTIONS[ar ? "ar" : "en"].map((s) => (
+                {(catalog === "import" ? IMPORT_SUGGESTIONS : SUGGESTIONS)[ar ? "ar" : "en"].map((s) => (
                   <button
                     key={s}
                     type="button"
@@ -399,7 +426,13 @@ export function ChatWidget({
               {featured.length ? (
                 <div className="space-y-3">
                   <p className="text-center text-[12px] font-semibold tracking-[0.03em] text-accent-red uppercase">
-                    {ar ? "عروض حية من الكتالوج" : "Live from this store’s sale categories"}
+                    {catalog === "import"
+                      ? ar
+                        ? "من هذا الكتالوج"
+                        : "From this catalog"
+                      : ar
+                        ? "عروض حية من الكتالوج"
+                        : "Live from this store’s sale categories"}
                   </p>
                   <div className={`grid gap-3 ${dock ? "grid-cols-1" : "sm:grid-cols-3"}`}>
                     {featured.map((p) => (

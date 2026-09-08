@@ -13,6 +13,9 @@ export function MidasAiWidget({
   tenantId = null,
   embed = false,
   defaultOpen = false,
+  clientName,
+  currency,
+  presentation = "overlay",
 }: {
   lockedStore?: StoreCode;
   pageSku?: string | null;
@@ -20,11 +23,15 @@ export function MidasAiWidget({
   tenantId?: string | null;
   embed?: boolean;
   defaultOpen?: boolean;
+  clientName?: string;
+  currency?: string;
+  presentation?: "overlay" | "stage";
 }) {
-  const [open, setOpen] = useState(defaultOpen);
+  const [open, setOpen] = useState(defaultOpen || presentation === "stage");
   const [mobile, setMobile] = useState(false);
   const titleId = useId();
   const ar = lockedStore ? lockedStore.endsWith("ar") || lockedStore === "ar" : false;
+  const stage = presentation === "stage";
 
   useEffect(() => {
     const mq = window.matchMedia("(max-width: 767px)");
@@ -35,7 +42,7 @@ export function MidasAiWidget({
   }, []);
 
   useEffect(() => {
-    if (!open) return;
+    if (!open || stage) return;
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") setOpen(false);
     };
@@ -46,7 +53,7 @@ export function MidasAiWidget({
       window.removeEventListener("keydown", onKey);
       document.body.style.overflow = prev;
     };
-  }, [open, mobile, embed]);
+  }, [open, mobile, embed, stage]);
 
   const wasOpen = useRef(defaultOpen);
 
@@ -68,9 +75,27 @@ export function MidasAiWidget({
       onClick={() => setOpen(true)}
     >
       <MessageCircle className="size-5" aria-hidden />
-      <span className="max-sm:sr-only">{ar ? "ميداس AI" : "Try Midas AI"}</span>
+      <span className="max-sm:sr-only">
+        {clientName ? (ar ? `اسأل ${clientName}` : `Ask ${clientName}`) : ar ? "ميداس AI" : "Try Midas AI"}
+      </span>
     </button>
   );
+
+  if (stage) {
+    return (
+      <div className="flex h-full min-h-0 w-full flex-col" data-testid="midas-ai-widget">
+        <ChatWidget
+          lockedStore={lockedStore}
+          pageSku={pageSku}
+          catalog={catalog}
+          tenantId={tenantId}
+          clientName={clientName}
+          currency={currency}
+          variant="dock"
+        />
+      </div>
+    );
+  }
 
   if (!open) {
     if (embed) {
@@ -83,7 +108,7 @@ export function MidasAiWidget({
     <section
       id={titleId}
       role="dialog"
-      aria-label="Midas AI"
+      aria-label={clientName ? `Midas AI for ${clientName}` : "Midas AI"}
       data-testid="midas-ai-panel"
       className={
         mobile
@@ -92,7 +117,16 @@ export function MidasAiWidget({
       }
     >
       <div className="flex min-h-0 flex-1 flex-col">
-        <ChatWidget lockedStore={lockedStore} pageSku={pageSku} catalog={catalog} tenantId={tenantId} variant="dock" onClose={() => setOpen(false)} />
+        <ChatWidget
+          lockedStore={lockedStore}
+          pageSku={pageSku}
+          catalog={catalog}
+          tenantId={tenantId}
+          clientName={clientName}
+          currency={currency}
+          variant="dock"
+          onClose={() => setOpen(false)}
+        />
       </div>
     </section>
   );

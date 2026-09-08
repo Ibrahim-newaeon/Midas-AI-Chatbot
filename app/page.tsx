@@ -27,7 +27,7 @@ export default function Home() {
       </div>
       <p className="border-b border-line bg-surface-off py-2 text-center text-[13px]">
         <a href="/setup" className="font-semibold underline">
-          Client setup
+          Client atelier
         </a>
         {" · "}
         <a href="/brief" className="font-semibold underline">
