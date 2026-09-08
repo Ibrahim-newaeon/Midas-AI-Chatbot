@@ -8,7 +8,7 @@
       "currency": "USD",
       "stock": "IN_STOCK",
       "url": "https://example.com/cove-accent-chair",
-      "image": "https://midasfurniture.com/media/catalog/product/placeholder/default/placeholder.jpg",
+      "image": "/samples/piece.svg",
       "category": "Living",
       "brand": "Sample Home",
       "color": "green",

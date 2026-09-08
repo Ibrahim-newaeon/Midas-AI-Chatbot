@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="640" height="480" viewBox="0 0 640 480" role="img" aria-label="Catalog piece">
+  <rect width="640" height="480" fill="#f3eee4"/>
+  <rect x="40" y="40" width="560" height="400" fill="none" stroke="#c4a35a" stroke-width="1"/>
+  <rect x="280" y="228" width="80" height="2" fill="#c4a35a"/>
+</svg>

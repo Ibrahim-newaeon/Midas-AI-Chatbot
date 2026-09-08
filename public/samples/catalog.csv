@@ -1,5 +1,5 @@
 sku,name,price,regular_price,currency,stock,url,image,category,brand,color,material
-101,Nord Velvet Sofa,890,1190,USD,IN_STOCK,https://example.com/nord-velvet-sofa,https://midasfurniture.com/media/catalog/product/placeholder/default/placeholder.jpg,Living,Sample Home,beige,velvet
-102,Harbour Dining Table,640,640,USD,IN_STOCK,https://example.com/harbour-dining-table,https://midasfurniture.com/media/catalog/product/placeholder/default/placeholder.jpg,Dining,Sample Home,oak,wood
-103,Lumen Floor Lamp,120,160,USD,IN_STOCK,https://example.com/lumen-floor-lamp,https://midasfurniture.com/media/catalog/product/placeholder/default/placeholder.jpg,Lighting,Sample Home,brass,metal
-104,Atlas King Bed,980,980,USD,OUT_OF_STOCK,https://example.com/atlas-king-bed,https://midasfurniture.com/media/catalog/product/placeholder/default/placeholder.jpg,Bedroom,Sample Home,walnut,wood
+101,Nord Velvet Sofa,890,1190,USD,IN_STOCK,https://example.com/nord-velvet-sofa,/samples/piece.svg,Living,Sample Home,beige,velvet
+102,Harbour Dining Table,640,640,USD,IN_STOCK,https://example.com/harbour-dining-table,/samples/piece.svg,Dining,Sample Home,oak,wood
+103,Lumen Floor Lamp,120,160,USD,IN_STOCK,https://example.com/lumen-floor-lamp,/samples/piece.svg,Lighting,Sample Home,brass,metal
+104,Atlas King Bed,980,980,USD,OUT_OF_STOCK,https://example.com/atlas-king-bed,/samples/piece.svg,Bedroom,Sample Home,walnut,wood
