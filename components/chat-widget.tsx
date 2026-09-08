@@ -43,6 +43,7 @@ function ProductCard({
   sameOrigin = false,
   onAddToCart,
   channel = "widget",
+  catalog = "live",
 }: {
   product: ProductDto & { title?: string; ctas?: ProductCta[] };
   ar: boolean;
@@ -50,13 +51,14 @@ function ProductCard({
   sameOrigin?: boolean;
   onAddToCart?: (product: ProductDto) => void;
   channel?: string;
+  catalog?: "live" | "mirror" | "import";
 }) {
   const price = formatPrice(product, ar);
   const lang = ar ? "ar" : "en";
   const title = product.title ?? pieceHeadline(product, lang);
   const href = withMidasAiUtm(product.pdp_url, channel);
   const canCart = product.stock_status === "IN_STOCK" && (product.ctas ? product.ctas.includes("add_to_cart") : true);
-  const fomo = fomoLine(product, country, lang);
+  const fomo = fomoLine(product, country, lang, catalog);
   const extraLink = sameOrigin ? {} : { target: "_blank" as const, rel: "noreferrer" };
   return (
     <article className="midas-card" data-testid={`product-card-${product.sku}`}>
@@ -98,7 +100,12 @@ function ProductCard({
         </div>
       </a>
       {fomo ? (
-        <p className="px-3 pb-2 text-center text-[12px] leading-snug font-semibold text-accent-red" data-testid="product-fomo">
+        <p
+          className={`px-3 pb-2 text-center text-[12px] leading-snug font-semibold ${
+            catalog === "import" ? "text-text-muted" : "text-accent-red"
+          }`}
+          data-testid="product-fomo"
+        >
           {fomo}
         </p>
       ) : null}
@@ -176,7 +183,8 @@ export function ChatWidget({
   );
   const ar = session.language === "ar";
   const dir = ar ? "rtl" : "ltr";
-  const country = WEBSITE_NAME[session.website][ar ? "ar" : "en"];
+  const country =
+    catalog === "import" && clientName ? clientName : WEBSITE_NAME[session.website][ar ? "ar" : "en"];
   const chatSessionId = useRef(
     typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : `web-${Date.now()}`,
   );
@@ -425,7 +433,11 @@ export function ChatWidget({
               </div>
               {featured.length ? (
                 <div className="space-y-3">
-                  <p className="text-center text-[12px] font-semibold tracking-[0.03em] text-accent-red uppercase">
+                  <p
+                    className={`text-center text-[12px] font-semibold tracking-[0.03em] uppercase ${
+                      catalog === "import" ? "text-text-muted" : "text-accent-red"
+                    }`}
+                  >
                     {catalog === "import"
                       ? ar
                         ? "من هذا الكتالوج"
@@ -441,6 +453,7 @@ export function ChatWidget({
                         product={p}
                         ar={ar}
                         country={country}
+                        catalog={catalog}
                         sameOrigin={catalog === "mirror"}
                         onAddToCart={addToCart}
                       />
@@ -474,6 +487,7 @@ export function ChatWidget({
                         product={p}
                         ar={ar}
                         country={country}
+                        catalog={catalog}
                         sameOrigin={catalog === "mirror"}
                         onAddToCart={addToCart}
                       />

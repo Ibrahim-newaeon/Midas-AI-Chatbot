@@ -218,6 +218,13 @@ test("identity reply includes SKU, sale price, FOMO, and add to cart", () => {
   assert.ok(fomoLine(londer, "Kuwait", "en")?.includes("50%"));
 });
 
+test("imported catalog FOMO never names a Magento country", () => {
+  const line = fomoLine(londer, "Harbour Home", "en", "import");
+  assert.equal(line, "50% off on the Harbour Home catalog.");
+  assert.ok(!line?.includes("Kuwait"));
+  assert.ok(!line?.includes("live in"));
+});
+
 test("budget parser reads under-N without converting currency", () => {
   assert.equal(parseBudget("sofa under 300 KWD"), 300);
   assert.equal(parseBudget("أقل من 500"), 500);

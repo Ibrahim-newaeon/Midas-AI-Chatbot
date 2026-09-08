@@ -64,7 +64,12 @@ export function identityPrice(product: Piece, lang: Lang): string {
   return now;
 }
 
-export function fomoLine(product: Piece, country: string, lang: Lang): string | null {
+export function fomoLine(
+  product: Piece,
+  country: string,
+  lang: Lang,
+  catalog: "live" | "mirror" | "import" = "live",
+): string | null {
   if (product.stock_status !== "IN_STOCK") return null;
   const off =
     product.discount_percent && product.discount_percent > 0
@@ -72,6 +77,14 @@ export function fomoLine(product: Piece, country: string, lang: Lang): string | 
       : product.regular_price > product.final_price
         ? Math.round((1 - product.final_price / product.regular_price) * 100)
         : 0;
+  if (catalog === "import") {
+    if (off > 0) {
+      return lang === "ar"
+        ? `خصم ${off}% على كتالوج ${country}.`
+        : `${off}% off on the ${country} catalog.`;
+    }
+    return lang === "ar" ? `متوفر في كتالوج ${country}.` : `In stock on the ${country} catalog.`;
+  }
   if (off > 0) {
     return lang === "ar"
       ? `هذا السعر الخاص حي الآن في ${country} — خصم ${off}%. أضفه قبل أن يتغيّر سعر الكتالوج.`
@@ -87,8 +100,9 @@ export function identityReply(input: {
   country: string;
   lang: Lang;
   prefix?: string;
+  catalog?: "live" | "mirror" | "import";
 }): string {
-  const { product, country, lang, prefix = "" } = input;
+  const { product, country, lang, prefix = "", catalog = "live" } = input;
   const headline = pieceHeadline(product, lang);
   const price = identityPrice(product, lang);
   const stock =
@@ -104,7 +118,7 @@ export function identityReply(input: {
       ? `${headline}، رقم ${product.sku}، ${price}، ${stock} في ${country}.`
       : `${headline}, SKU ${product.sku}, ${price}, ${stock} in ${country}.`;
   const lines = [prefix + facts];
-  const fomo = fomoLine(product, country, lang);
+  const fomo = fomoLine(product, country, lang, catalog);
   if (fomo) lines.push(fomo);
   if (product.stock_status === "IN_STOCK") {
     lines.push(lang === "ar" ? "نضيفه إلى السلة؟" : "Add to cart?");

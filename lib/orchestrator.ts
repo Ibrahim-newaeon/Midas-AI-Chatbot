@@ -206,7 +206,7 @@ export async function runRulesOrchestrator(input: {
         : "";
     await stampMemory(session, [p], constraints);
     return {
-      message: identityReply({ product: p, country, lang, prefix: storeLock }),
+      message: identityReply({ product: p, country, lang, prefix: storeLock, catalog: currentCatalog() }),
       ui: cards([p], ["view"], lang),
       used_tools: used,
       engine: "rules",
@@ -349,7 +349,7 @@ export async function runRulesOrchestrator(input: {
     const p = found.product;
     await stampMemory(session, [p], constraints);
     return {
-      message: identityReply({ product: p, country, lang }),
+      message: identityReply({ product: p, country, lang, catalog: currentCatalog() }),
       ui: cards([p], ["view"], lang),
       used_tools: used,
       engine: "rules",
